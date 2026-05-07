@@ -14,7 +14,7 @@ export default function NetWorthSnapshot() {
     {
       name: 'Snapshot',
       Assets: totalAssets,
-      Liabilities: totalLiabilities
+      Liabilities: -totalLiabilities
     }
   ];
 
@@ -45,12 +45,12 @@ export default function NetWorthSnapshot() {
         ) : (
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={barData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" />
+              <CartesianGrid strokeDasharray="3 3" vertical={false} />
               <XAxis dataKey="name" hide />
-              <YAxis tickFormatter={(val) => `$${val/1000}k`} />
-              <Tooltip formatter={(value) => formatCurrency(value)} />
-              <Bar dataKey="Assets" fill={getCategoryColor('Total Assets')} radius={[4, 4, 0, 0]} barSize={40} />
-              <Bar dataKey="Liabilities" fill={getCategoryColor('Total Liabilities')} radius={[4, 4, 0, 0]} barSize={40} />
+              <YAxis tickFormatter={(val) => `$${Math.abs(val)/1000}k`} />
+              <Tooltip formatter={(value) => formatCurrency(Math.abs(value))} />
+              <Bar dataKey="Assets" fill="#10b981" stackId="a" radius={[4, 4, 0, 0]} barSize={60} />
+              <Bar dataKey="Liabilities" fill="#ef4444" stackId="a" radius={[0, 0, 4, 4]} barSize={60} />
             </BarChart>
           </ResponsiveContainer>
         )}

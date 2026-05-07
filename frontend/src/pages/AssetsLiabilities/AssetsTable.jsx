@@ -212,10 +212,14 @@ export default function AssetsTable() {
                     <td className="whitespace-nowrap px-3 py-4 text-sm font-semibold text-gray-900">{formatCurrency(item.amount)}</td>
                     <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{item.monthly_fixed_savings ? formatCurrency(item.monthly_fixed_savings) : '-'}</td>
                     <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6 space-x-4">
-                      <button onClick={() => handleUpdateBalance(item)} className="inline-flex items-center gap-1 rounded-md bg-white px-2.5 py-1.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">
-                        <PlusIcon className="w-4 h-4" />
-                        Update Balance
-                      </button>
+                      {item.is_auto_injected ? (
+                        <span className="text-xs text-gray-400 italic">Managed by module</span>
+                      ) : (
+                        <button onClick={() => handleUpdateBalance(item)} className="inline-flex items-center gap-1 rounded-md bg-white px-2.5 py-1.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">
+                          <PlusIcon className="w-4 h-4" />
+                          Update Balance
+                        </button>
+                      )}
                     </td>
                   </tr>
                   {expandedRows[item.name] && (
@@ -238,8 +242,14 @@ export default function AssetsTable() {
                                     <td className="whitespace-nowrap px-4 py-2 text-sm text-gray-600">{ledgerItem.date || '-'}</td>
                                     <td className="whitespace-nowrap px-4 py-2 text-sm text-gray-900">{formatCurrency(ledgerItem.amount)}</td>
                                     <td className="whitespace-nowrap px-4 py-2 text-sm text-right space-x-3">
-                                      <button onClick={() => handleEdit(ledgerItem)} className="text-primary-500 hover:text-primary-800 text-xs">Edit</button>
-                                      <button onClick={() => confirmDelete(ledgerItem.id)} className="text-red-600 hover:text-red-900 text-xs">Delete</button>
+                                      {ledgerItem.is_auto_injected ? (
+                                        <span className="text-xs text-gray-400 italic">Locked</span>
+                                      ) : (
+                                        <>
+                                          <button onClick={() => handleEdit(ledgerItem)} className="text-primary-500 hover:text-primary-800 text-xs">Edit</button>
+                                          <button onClick={() => confirmDelete(ledgerItem.id)} className="text-red-600 hover:text-red-900 text-xs">Delete</button>
+                                        </>
+                                      )}
                                     </td>
                                   </tr>
                                 ))}

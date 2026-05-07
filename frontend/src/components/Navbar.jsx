@@ -57,6 +57,11 @@ const icons = {
       <rect x="17" y="3" width="4" height="18" />
     </svg>
   ),
+  'Real Estate': (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 21h18M3 10l9-7 9 7M4 10v11M20 10v11M9 21v-6a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v6" />
+    </svg>
+  ),
   Settings: (
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="12" cy="12" r="3" />
@@ -69,6 +74,7 @@ const TABS = [
   { name: 'Dashboard', path: '/dashboard' },
   { name: 'Budget', path: '/budget' },
   { name: 'Assets & Liabilities', path: '/assets' },
+  { name: 'Real Estate', path: '/rentals' },
   { name: 'Expense Tracker', path: '/expenses' },
   { name: 'Settings', path: '/settings' },
 ];

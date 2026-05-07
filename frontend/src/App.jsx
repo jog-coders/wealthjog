@@ -7,6 +7,7 @@ import AssetsLiabilitiesPage from './pages/AssetsLiabilities/AssetsLiabilitiesPa
 import ExpenseTrackerPage from './pages/ExpenseTracker/ExpenseTrackerPage';
 import DashboardPage from './pages/Dashboard/DashboardPage';
 import SettingsPage from './pages/Settings/SettingsPage';
+import RentalsPage from './pages/Rentals/RentalsPage';
 import Navbar from './components/Navbar';
 
 function ProtectedRoute({ children }) {
@@ -39,12 +40,13 @@ function App() {
   return (
     <AppProvider>
       <Toaster position="top-right" />
-      <BrowserRouter>
+      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/budget" element={<ProtectedRoute><BudgetPage /></ProtectedRoute>} />
           <Route path="/assets" element={<ProtectedRoute><AssetsLiabilitiesPage /></ProtectedRoute>} />
+          <Route path="/rentals" element={<ProtectedRoute><RentalsPage /></ProtectedRoute>} />
           <Route path="/expenses" element={<ProtectedRoute><ExpenseTrackerPage /></ProtectedRoute>} />
           <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />

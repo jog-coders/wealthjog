@@ -24,6 +24,7 @@ import liabilitiesRoutes from './routes/liabilities.js';
 import expensesRoutes from './routes/expenses.js';
 import dashboardRoutes from './routes/dashboard.js';
 import settingsRoutes from './routes/settings.js';
+import rentalsRoutes from './routes/rentals.js';
 import { authMiddleware } from './middleware/auth.js';
 
 // Routes will be mounted here later
@@ -41,6 +42,7 @@ app.use('/api/liabilities', liabilitiesRoutes);
 app.use('/api/expenses', expensesRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/settings', settingsRoutes);
+app.use('/api/rentals', rentalsRoutes);
 
 // Global error handler
 app.use((err, req, res, next) => {

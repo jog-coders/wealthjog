@@ -74,7 +74,7 @@ router.get('/expense-vs-budget', async (req, res) => {
       .from('budget_line_items')
       .select('*')
       .eq('user_id', req.userId)
-      .in('section', ['annual', 'guilt_free']);
+      .eq('section', 'guilt_free');
     if (budError) throw budError;
 
     const result = [];
@@ -84,12 +84,7 @@ router.get('/expense-vs-budget', async (req, res) => {
       if (!category) return;
       
       const item = budgetItems.find(b => b.category === category);
-      let budgeted = 0;
-      if (item.section === 'guilt_free') {
-        budgeted = Number(item.amount) || 0;
-      } else if (item.section === 'annual') {
-        budgeted = (Number(item.amount) || 0) / 12;
-      }
+      const budgeted = Number(item.amount) || 0;
 
       const actual = monthExpenses
         .filter(e => e.budget_category === category)

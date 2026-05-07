@@ -113,8 +113,14 @@ export default function ExpenseTable() {
                     </td>
                     <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 font-medium">{formatCurrency(item.amount)}</td>
                     <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6 space-x-4">
-                      <button onClick={() => handleEdit(item)} className="text-primary-500 hover:text-primary-800">Edit</button>
-                      <button onClick={() => confirmDelete(item.id)} className="text-red-600 hover:text-red-900">Delete</button>
+                      {item.is_auto_injected ? (
+                        <span className="text-xs text-gray-400 italic">Managed by module</span>
+                      ) : (
+                        <>
+                          <button onClick={() => handleEdit(item)} className="text-primary-500 hover:text-primary-800">Edit</button>
+                          <button onClick={() => confirmDelete(item.id)} className="text-red-600 hover:text-red-900">Delete</button>
+                        </>
+                      )}
                     </td>
                   </>
                 )}
