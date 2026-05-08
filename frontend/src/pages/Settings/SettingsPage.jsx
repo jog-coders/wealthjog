@@ -122,6 +122,37 @@ export default function SettingsPage() {
         </div>
       </div>
 
+      <div className="bg-white border border-gray-100 rounded-xl">
+        <div className="px-4 py-5 sm:p-6">
+          <h3 className="text-base font-semibold leading-6 text-gray-900">Account Security</h3>
+          <div className="mt-2 max-w-xl text-sm text-gray-500">
+            <p>Update your password. This is especially important if you were invited via a magic link and haven't set a password yet.</p>
+          </div>
+          <form className="mt-5 sm:flex sm:items-center" onSubmit={async (e) => {
+            e.preventDefault();
+            const form = e.target;
+            const newPassword = form.password.value;
+            if (newPassword.length < 6) return toast.error('Password must be at least 6 characters');
+            
+            const toastId = toast.loading('Updating password...');
+            const { error } = await import('../../supabaseClient').then(m => m.supabase.auth.updateUser({ password: newPassword }));
+            
+            if (error) {
+              toast.error(error.message, { id: toastId });
+            } else {
+              toast.success('Password updated successfully!', { id: toastId });
+              form.reset();
+            }
+          }}>
+            <div className="w-full sm:max-w-xs">
+              <label htmlFor="password" className="sr-only">New Password</label>
+              <input type="password" name="password" id="password" required className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-primary-600 sm:text-sm sm:leading-6" placeholder="New Password" />
+            </div>
+            <button type="submit" className="mt-3 inline-flex w-full items-center justify-center rounded-md bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 sm:ml-3 sm:mt-0 sm:w-auto">Update Password</button>
+          </form>
+        </div>
+      </div>
+
       <div className="bg-red-50 border border-red-200 rounded-xl">
         <div className="px-4 py-5 sm:p-6">
           <h3 className="text-base font-semibold leading-6 text-red-900">Danger Zone</h3>

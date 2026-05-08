@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { useNavigate } from 'react-router-dom';
+import { useAppContext } from '../context/AppContext';
 
 function LogoMark({ size = 48 }) {
   return (
@@ -22,6 +23,13 @@ export default function LoginPage() {
   const [error, setError] = useState(null);
 
   const navigate = useNavigate();
+  const { session } = useAppContext();
+
+  useEffect(() => {
+    if (session) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [session, navigate]);
 
   const handleEmailAuth = async (e) => {
     e.preventDefault();
