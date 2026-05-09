@@ -16,7 +16,17 @@ export const authMiddleware = async (req, res, next) => {
       return res.status(401).json({ error: 'Unauthorized: Invalid token' });
     }
 
-    req.userId = user.id;
+    // Family Sharing: resolve the effective user ID.
+    // If this user is delegated to a "family head", use the head's ID for all data queries.
+    // This allows family members to transparently share the same data pool.
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('family_head_id')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    req.userId = profile?.family_head_id ?? user.id;
+    req.actualUserId = user.id; // retain actual ID for invite logic
     next();
   } catch (error) {
     return res.status(401).json({ error: 'Unauthorized: Failed to authenticate' });

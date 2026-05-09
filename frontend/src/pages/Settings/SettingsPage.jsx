@@ -1,10 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAppContext } from '../../context/AppContext';
 import { useApi } from '../../hooks/useApi';
 import { useNavigate } from 'react-router-dom';
 import ConfirmDialog from '../../components/ConfirmDialog';
 import EnumManager from './EnumManager';
-import { useRef } from 'react';
 import toast from 'react-hot-toast';
 
 export default function SettingsPage() {
@@ -13,9 +12,43 @@ export default function SettingsPage() {
   const [importData, setImportData] = useState(null);
   const fileInputRef = useRef(null);
 
+  // Family sharing state
+  const [familyEmail, setFamilyEmail] = useState('');
+  const [familyMembers, setFamilyMembers] = useState([]);
+  const [familyLoading, setFamilyLoading] = useState(false);
+
   const { get, post, del } = useApi();
   const { refreshAll } = useAppContext();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    get('/api/settings/family-members').then(({ data }) => {
+      if (data) setFamilyMembers(data);
+    });
+  }, []);
+
+  const handleInviteFamily = async (e) => {
+    e.preventDefault();
+    if (!familyEmail) return;
+    setFamilyLoading(true);
+    const { data, error } = await post('/api/settings/invite-family', { email: familyEmail });
+    setFamilyLoading(false);
+    if (!error) {
+      toast.success(`Invitation sent to ${familyEmail}`);
+      setFamilyEmail('');
+      // Refresh members list
+      const { data: members } = await get('/api/settings/family-members');
+      if (members) setFamilyMembers(members);
+    }
+  };
+
+  const handleRemoveMember = async (memberId, email) => {
+    if (!window.confirm(`Remove ${email} from family sharing?`)) return;
+    const { error } = await del(`/api/settings/family-members/${memberId}`);
+    if (!error) {
+      setFamilyMembers(prev => prev.filter(m => m.id !== memberId));
+    }
+  };
 
   const handleExport = async () => {
     const { data, error } = await get('/api/settings/export');
@@ -150,6 +183,59 @@ export default function SettingsPage() {
             </div>
             <button type="submit" className="mt-3 inline-flex w-full items-center justify-center rounded-md bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 sm:ml-3 sm:mt-0 sm:w-auto">Update Password</button>
           </form>
+        </div>
+      </div>
+
+      {/* Family Sharing */}
+      <div className="bg-white border border-gray-100 rounded-xl">
+        <div className="px-4 py-5 sm:p-6">
+          <h3 className="text-base font-semibold leading-6 text-gray-900">👨‍👩‍👧 Family Sharing</h3>
+          <div className="mt-1 max-w-xl text-sm text-gray-500">
+            <p>Invite family members so they can access and manage the same financial data.</p>
+          </div>
+
+          {/* Invite form */}
+          <form onSubmit={handleInviteFamily} className="mt-5 sm:flex sm:items-center gap-3">
+            <div className="w-full sm:max-w-xs">
+              <label htmlFor="familyEmail" className="sr-only">Email address</label>
+              <input
+                id="familyEmail"
+                type="email"
+                required
+                value={familyEmail}
+                onChange={e => setFamilyEmail(e.target.value)}
+                placeholder="family@example.com"
+                className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-primary-600 sm:text-sm sm:leading-6"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={familyLoading}
+              className="mt-3 sm:mt-0 inline-flex items-center rounded-md bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 disabled:opacity-50"
+            >
+              {familyLoading ? 'Sending…' : 'Send Invite'}
+            </button>
+          </form>
+
+          {/* Current members */}
+          {familyMembers.length > 0 && (
+            <div className="mt-6">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Active Members</p>
+              <ul className="divide-y divide-gray-100 rounded-lg border border-gray-100">
+                {familyMembers.map(member => (
+                  <li key={member.id} className="flex items-center justify-between px-4 py-3 text-sm">
+                    <span className="text-gray-800">{member.email}</span>
+                    <button
+                      onClick={() => handleRemoveMember(member.id, member.email)}
+                      className="text-red-500 hover:text-red-700 text-xs font-medium"
+                    >
+                      Remove
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
       </div>
 

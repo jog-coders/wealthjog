@@ -218,4 +218,94 @@ router.delete('/all-data', async (req, res) => {
   }
 });
 
+// ── Family Sharing ──────────────────────────────────────────────────────────
+
+// List all members currently linked to this user (the head)
+router.get('/family-members', async (req, res) => {
+  try {
+    const headId = req.actualUserId ?? req.userId;
+
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('family_head_id', headId);
+
+    if (error) throw error;
+
+    // Fetch their emails via the admin API
+    const memberDetails = await Promise.all(
+      (data || []).map(async (row) => {
+        const { data: { user } } = await supabase.auth.admin.getUserById(row.id);
+        return { id: row.id, email: user?.email ?? '(unknown)' };
+      })
+    );
+
+    res.json(memberDetails);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Invite a new family member: send them a magic link and pre-create their profile row
+router.post('/invite-family',
+  [body('email').isEmail().normalizeEmail()],
+  validate,
+  async (req, res) => {
+    try {
+      const { email } = req.body;
+      // The head is whoever is logged in (could themselves be a delegated member—we
+      // always store the *root* head so chains don't form)
+      const headId = req.userId; // already resolved by middleware to root head
+
+      // 1. Invite the user via Supabase Admin (sends a magic-link invite email)
+      const { data: inviteData, error: inviteError } = await supabase.auth.admin.inviteUserByEmail(email);
+      if (inviteError) throw inviteError;
+
+      const invitedUserId = inviteData.user?.id;
+      if (!invitedUserId) throw new Error('Invite succeeded but returned no user ID');
+
+      // 2. Create (or update) the profile row linking invited user → head
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .upsert({ id: invitedUserId, family_head_id: headId }, { onConflict: 'id' });
+
+      if (profileError) throw profileError;
+
+      res.json({ success: true, message: `Invitation sent to ${email}` });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+);
+
+// Remove a family member (unlink them — they keep their account but lose shared access)
+router.delete('/family-members/:memberId', async (req, res) => {
+  try {
+    const { memberId } = req.params;
+    const headId = req.userId;
+
+    // Safety: only the head can remove members
+    const { data: profile, error: fetchErr } = await supabase
+      .from('profiles')
+      .select('family_head_id')
+      .eq('id', memberId)
+      .maybeSingle();
+
+    if (fetchErr) throw fetchErr;
+    if (!profile || profile.family_head_id !== headId) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    const { error } = await supabase
+      .from('profiles')
+      .update({ family_head_id: null })
+      .eq('id', memberId);
+
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 export default router;
