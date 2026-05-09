@@ -258,7 +258,11 @@ router.post('/invite-family',
       const headId = req.userId; // already resolved by middleware to root head
 
       // 1. Invite the user via Supabase Admin (sends a magic-link invite email)
-      const { data: inviteData, error: inviteError } = await supabase.auth.admin.inviteUserByEmail(email);
+      // redirectTo sends them to our dedicated accept-invite page instead of login
+      const siteUrl = process.env.CLIENT_ORIGIN || 'http://localhost:5173';
+      const { data: inviteData, error: inviteError } = await supabase.auth.admin.inviteUserByEmail(email, {
+        redirectTo: `${siteUrl}/accept-invite`
+      });
       if (inviteError) throw inviteError;
 
       const invitedUserId = inviteData.user?.id;

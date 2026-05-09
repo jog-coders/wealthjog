@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AppProvider, useAppContext } from './context/AppContext';
 import LoginPage from './pages/LoginPage';
+import AcceptInvitePage from './pages/AcceptInvitePage';
 import BudgetPage from './pages/Budget/BudgetPage';
 import AssetsLiabilitiesPage from './pages/AssetsLiabilities/AssetsLiabilitiesPage';
 import ExpenseTrackerPage from './pages/ExpenseTracker/ExpenseTrackerPage';
@@ -43,6 +44,7 @@ function App() {
       <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/accept-invite" element={<AcceptInvitePage />} />
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/budget" element={<ProtectedRoute><BudgetPage /></ProtectedRoute>} />
           <Route path="/assets" element={<ProtectedRoute><AssetsLiabilitiesPage /></ProtectedRoute>} />
