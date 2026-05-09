@@ -17,11 +17,11 @@ const RentalsPage      = lazy(() => import('./pages/Rentals/RentalsPage'));
 // ── Page loader ──────────────────────────────────────────────────────────────
 function PageLoader() {
   return (
-    <div style={{ minHeight: '100vh', background: '#0A0E1A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <svg style={{ width: 32, height: 32, color: '#00D4A8', animation: 'spin 1s linear infinite' }} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+    <div style={{ minHeight: '100vh', background: '#F5F0E8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <svg style={{ width: 32, height: 32, color: '#1A6B4A', animation: 'spin 1s linear infinite' }} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-        <circle style={{ opacity: 0.2 }} cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-        <path style={{ opacity: 0.9 }} fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+        <circle style={{ opacity: 0.15 }} cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+        <path style={{ opacity: 0.85 }} fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
       </svg>
     </div>
   );
@@ -59,9 +59,9 @@ function BottomTabBar() {
         aria-label="Mobile tab navigation"
         style={{
           position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 50,
-          background: 'rgba(15,22,41,0.95)',
-          backdropFilter: 'blur(16px)',
-          borderTop: '1px solid rgba(255,255,255,0.06)',
+          background: '#1A3A2A',
+          backdropFilter: 'blur(0px)',
+          borderTop: '1px solid rgba(255,255,255,0.08)',
           display: 'flex',
           paddingBottom: 'env(safe-area-inset-bottom)',
         }}
@@ -76,7 +76,7 @@ function BottomTabBar() {
               justifyContent: 'center', gap: 3, padding: '8px 4px',
               textDecoration: 'none', fontSize: 9, fontWeight: 500,
               letterSpacing: '0.04em', textTransform: 'uppercase',
-              color: isActive ? '#00D4A8' : '#4D5870',
+              color: isActive ? '#C9972B' : 'rgba(200,222,206,0.55)',
               transition: 'color 0.15s',
             })}
           >
@@ -95,7 +95,7 @@ function ProtectedRoute({ children }) {
   if (authLoading) return <PageLoader />;
   if (!session) return <Navigate to="/login" replace />;
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: '#0A0E1A' }}>
+    <div style={{ display: 'flex', minHeight: '100vh', background: '#F5F0E8' }}>
       {/* Sidebar (fixed — takes 240px on desktop) */}
       <Navbar />
       {/* Spacer for the fixed sidebar on desktop */}

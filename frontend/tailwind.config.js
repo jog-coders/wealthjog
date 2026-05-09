@@ -7,52 +7,55 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Dark premium backgrounds
-        dark: {
-          900: '#070B14',  // deepest bg
-          800: '#0A0E1A',  // main bg
-          700: '#0F1629',  // sidebar / card bg
-          600: '#151E35',  // card hover / elevated
-          500: '#1C2640',  // borders / dividers
-          400: '#253050',  // subtle borders
-          300: '#3D4E6B',  // muted elements
+        // Warm premium palette
+        cream: {
+          50:  '#FDFAF5',
+          100: '#F7F3EB',
+          200: '#EDE8DC',
+          300: '#DDD6C6',
+          400: '#C8BEAA',
         },
-        // Emerald accent (primary)
-        accent: {
-          DEFAULT: '#00D4A8',
-          50:  'rgba(0,212,168,0.08)',
-          100: 'rgba(0,212,168,0.15)',
-          200: 'rgba(0,212,168,0.25)',
-          300: '#00BF97',
-          400: '#00D4A8',
-          500: '#00E8B8',
-          glow: '0 0 20px rgba(0,212,168,0.35)',
+        forest: {
+          50:  '#EBF2EE',
+          100: '#C8DECE',
+          200: '#8FB99A',
+          300: '#5A9470',
+          400: '#2E7A4F',
+          500: '#1A6B4A',
+          600: '#155A3E',
+          700: '#0F4730',
+          800: '#0A3422',
+          900: '#062115',
+          sidebar: '#1A3A2A',
+          'sidebar-dark': '#132B1E',
         },
-        // Legacy primary kept for backward compat
+        gold: {
+          50:  '#FDF8EC',
+          100: '#FAEFD0',
+          200: '#F5DFA1',
+          300: '#EEC96A',
+          400: '#C9972B',
+          500: '#B3821F',
+          600: '#9A6D18',
+        },
+        // Keep primary alias pointing to forest
         primary: {
-          50:  '#EBF7F3',
-          100: '#D6EFE7',
-          200: '#AEDFD0',
-          300: '#5DCAA5',
-          400: '#2DB88A',
-          500: '#1D9E75',
-          600: '#17816A',
-          700: '#11614A',
-          800: '#085041',
-          900: '#053529',
+          50:  '#EBF2EE',
+          100: '#C8DECE',
+          200: '#8FB99A',
+          300: '#5A9470',
+          400: '#2E7A4F',
+          500: '#1A6B4A',
+          600: '#155A3E',
+          700: '#0F4730',
+          800: '#1A3A2A',
+          900: '#062115',
         },
-        // Text scale
-        text: {
-          primary:   '#F0F4FF',
-          secondary: '#8892A4',
-          muted:     '#4D5870',
-          accent:    '#00D4A8',
-        },
-        // Status colors (dark-optimised)
-        success: '#00D4A8',
-        danger:  '#FF4D6A',
-        warning: '#FFB547',
-        info:    '#4D9FFF',
+        // Semantic
+        success: '#1A6B4A',
+        danger:  '#C0392B',
+        warning: '#C9972B',
+        info:    '#2B6CB0',
       },
       fontFamily: {
         sans: ['DM Sans', 'ui-sans-serif', 'system-ui', 'sans-serif'],
@@ -63,15 +66,11 @@ export default {
         '3xl': '1.25rem',
       },
       boxShadow: {
-        'glow-sm':  '0 0 12px rgba(0,212,168,0.2)',
-        'glow':     '0 0 20px rgba(0,212,168,0.35)',
-        'glow-lg':  '0 0 40px rgba(0,212,168,0.25)',
-        'card':     '0 4px 24px rgba(0,0,0,0.35)',
-        'card-lg':  '0 8px 40px rgba(0,0,0,0.45)',
-      },
-      backgroundImage: {
-        'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
-        'card-shine': 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0) 100%)',
+        'warm-sm': '0 2px 8px rgba(26,58,42,0.07)',
+        'warm':    '0 4px 16px rgba(26,58,42,0.10)',
+        'warm-lg': '0 8px 32px rgba(26,58,42,0.12)',
+        'warm-xl': '0 16px 48px rgba(26,58,42,0.15)',
+        'gold':    '0 0 0 3px rgba(201,151,43,0.25)',
       },
     },
   },
