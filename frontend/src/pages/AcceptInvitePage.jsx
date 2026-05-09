@@ -40,8 +40,24 @@ export default function AcceptInvitePage() {
       const { data: { session }, error } = await supabase.auth.getSession();
 
       if (session) {
-        // User is authenticated via the invite token — let them set a password
-        setPageState(STATE.SET_PASSWORD);
+        // Check if this is a brand-new invite user (no password set yet)
+        // vs. an already-confirmed user who somehow landed here.
+        // Invited users have `amr` containing 'otp' and have not yet set a password.
+        const user = session.user;
+        const isNewInvite = !user.last_sign_in_at ||
+                            user.app_metadata?.provider === 'email' &&
+                            !user.confirmed_at;
+
+        // Simpler heuristic: if the URL contains 'type=invite' in the hash, it's an invite flow
+        const hash = window.location.hash;
+        const isInviteFlow = hash.includes('type=invite') || hash.includes('type=recovery');
+
+        if (isInviteFlow || isNewInvite) {
+          setPageState(STATE.SET_PASSWORD);
+        } else {
+          // Already confirmed user — just send them to dashboard
+          navigate('/dashboard', { replace: true });
+        }
         return;
       }
 
@@ -59,7 +75,7 @@ export default function AcceptInvitePage() {
         return;
       }
 
-      // No token at all
+      // No token at all — not an invite flow
       setErrorMsg('This invite link is invalid or has already been used. Please ask to be re-invited.');
       setPageState(STATE.ERROR);
     };

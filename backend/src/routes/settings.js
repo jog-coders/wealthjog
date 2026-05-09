@@ -253,29 +253,56 @@ router.post('/invite-family',
   async (req, res) => {
     try {
       const { email } = req.body;
-      // The head is whoever is logged in (could themselves be a delegated member—we
-      // always store the *root* head so chains don't form)
       const headId = req.userId; // already resolved by middleware to root head
-
-      // 1. Invite the user via Supabase Admin (sends a magic-link invite email)
-      // redirectTo sends them to our dedicated accept-invite page instead of login
       const siteUrl = process.env.CLIENT_ORIGIN || 'http://localhost:5173';
+
+      let invitedUserId = null;
+      let alreadyExisted = false;
+
+      // 1. Try to invite. If user already exists, Supabase throws "already registered".
+      //    In that case, look them up by email via the admin API and link them directly.
       const { data: inviteData, error: inviteError } = await supabase.auth.admin.inviteUserByEmail(email, {
         redirectTo: `${siteUrl}/accept-invite`
       });
-      if (inviteError) throw inviteError;
 
-      const invitedUserId = inviteData.user?.id;
-      if (!invitedUserId) throw new Error('Invite succeeded but returned no user ID');
+      if (inviteError) {
+        const isExisting = inviteError.message?.toLowerCase().includes('already') ||
+                           inviteError.status === 422;
+        if (!isExisting) throw inviteError;
 
-      // 2. Create (or update) the profile row linking invited user → head
+        // User already exists — find them
+        const { data: { users }, error: listErr } = await supabase.auth.admin.listUsers();
+        if (listErr) throw listErr;
+
+        const existingUser = users.find(u => u.email === email);
+        if (!existingUser) {
+          return res.status(404).json({ error: `Could not find user with email ${email}` });
+        }
+
+        invitedUserId = existingUser.id;
+        alreadyExisted = true;
+      } else {
+        invitedUserId = inviteData.user?.id;
+        if (!invitedUserId) throw new Error('Invite succeeded but returned no user ID');
+      }
+
+      // 2. Guard: don't link someone to themselves
+      if (invitedUserId === headId) {
+        return res.status(400).json({ error: 'You cannot add yourself as a family member.' });
+      }
+
+      // 3. Upsert the profile row linking invited user → head
       const { error: profileError } = await supabase
         .from('profiles')
         .upsert({ id: invitedUserId, family_head_id: headId }, { onConflict: 'id' });
 
       if (profileError) throw profileError;
 
-      res.json({ success: true, message: `Invitation sent to ${email}` });
+      const message = alreadyExisted
+        ? `${email} already has an account — they've been linked to your household. They can sign in normally.`
+        : `Invitation sent to ${email}`;
+
+      res.json({ success: true, message, alreadyExisted });
     } catch (error) {
       res.status(500).json({ error: error.message });
     }

@@ -33,8 +33,8 @@ export default function SettingsPage() {
     setFamilyLoading(true);
     const { data, error } = await post('/api/settings/invite-family', { email: familyEmail });
     setFamilyLoading(false);
-    if (!error) {
-      toast.success(`Invitation sent to ${familyEmail}`);
+    if (!error && data) {
+      toast.success(data.message);
       setFamilyEmail('');
       // Refresh members list
       const { data: members } = await get('/api/settings/family-members');
