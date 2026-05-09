@@ -136,3 +136,8 @@ ON public.profiles FOR SELECT USING (auth.uid() = id);
 DROP POLICY IF EXISTS "Users can update their own profile" ON public.profiles;
 CREATE POLICY "Users can update their own profile"
 ON public.profiles FOR ALL USING (auth.uid() = id);
+
+-- ============================================================
+-- RENTAL: is_active flag (soft-delete / deactivate)
+-- ============================================================
+ALTER TABLE public.rental_properties ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;

@@ -3,7 +3,7 @@ import { useApi } from './useApi';
 import { useAppContext } from '../context/AppContext';
 
 export const useRentals = () => {
-  const { get, post, put, del } = useApi();
+  const { get, post, put, patch, del } = useApi();
   const { session, refreshTrigger } = useAppContext();
   
   const [rentals, setRentals] = useState([]);
@@ -39,7 +39,13 @@ export const useRentals = () => {
     return { error };
   };
 
-  return { rentals, loading, createRental, updateRental, deleteRental, refresh: fetchRentals };
+  const toggleStatus = async (id, is_active) => {
+    const { data, error } = await patch(`/api/rentals/${id}/status`, { is_active });
+    if (!error) await fetchRentals();
+    return { data, error };
+  };
+
+  return { rentals, loading, createRental, updateRental, deleteRental, toggleStatus, refresh: fetchRentals };
 };
 
 export const useRentalLedger = (rentalId) => {

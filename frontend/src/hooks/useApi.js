@@ -54,10 +54,11 @@ export const useApi = () => {
     }
   }, [session?.access_token]);
 
-  const get = useCallback((path) => request('GET', path), [request]);
-  const post = useCallback((path, body) => request('POST', path, body), [request]);
-  const put = useCallback((path, body) => request('PUT', path, body), [request]);
-  const del = useCallback((path) => request('DELETE', path), [request]);
+  const get   = useCallback((path)       => request('GET',    path),       [request]);
+  const post  = useCallback((path, body) => request('POST',   path, body), [request]);
+  const put   = useCallback((path, body) => request('PUT',    path, body), [request]);
+  const patch = useCallback((path, body) => request('PATCH',  path, body), [request]);
+  const del   = useCallback((path)       => request('DELETE', path),       [request]);
 
-  return { get, post, put, del };
+  return { get, post, put, patch, del };
 };

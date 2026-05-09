@@ -252,6 +252,38 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
+// Toggle active / inactive (soft-delete)
+router.patch('/:id/status', async (req, res) => {
+  try {
+    const { is_active } = req.body;
+    if (typeof is_active !== 'boolean') {
+      return res.status(400).json({ error: 'is_active must be a boolean' });
+    }
+
+    const { data, error } = await supabase
+      .from('rental_properties')
+      .update({ is_active, updated_at: new Date().toISOString() })
+      .eq('id', req.params.id)
+      .eq('user_id', req.userId)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    // When deactivating, remove the linked asset/liability/income entries.
+    // When re-activating, restore them.
+    if (!is_active) {
+      await deleteIntegrations(req.userId, req.params.id);
+    } else {
+      await upsertIntegrations(req.userId, data);
+    }
+
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // --- LEDGER ROUTES ---
 
 async function syncLedgerToExpenses(userId, ledgerItem, propertyName) {
