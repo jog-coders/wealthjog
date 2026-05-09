@@ -65,9 +65,29 @@ async function upsertIntegrations(userId, property, snapshotDate = null) {
     await supabase.from('liabilities').delete().eq('source_id', property.id).eq('source_type', 'rental_property');
   }
 
-  // Clean up any previously auto-injected budget/income entries (from older versions)
+  // 3. INCOME (Rent) — keep this synced so rent appears in income tracker
+  if (Number(property.rent) > 0) {
+    const { data: incCheck } = await supabase.from('income').select('id').eq('source_id', property.id).eq('source_type', 'rental_property').maybeSingle();
+    const incData = {
+      user_id: userId,
+      name: `${property.property_name} Rent`,
+      type: 'Rental',
+      frequency: 'Monthly',
+      amount: property.rent,
+      gross_income: property.rent,
+      is_auto_injected: true,
+      source_id: property.id,
+      source_type: 'rental_property',
+      updated_at: new Date().toISOString()
+    };
+    if (incCheck) await supabase.from('income').update(incData).eq('id', incCheck.id);
+    else await supabase.from('income').insert([incData]);
+  } else {
+    await supabase.from('income').delete().eq('source_id', property.id).eq('source_type', 'rental_property');
+  }
+
+  // Clean up any previously auto-injected budget entries (mortgage/PM fees no longer auto-injected)
   await supabase.from('budget_line_items').delete().eq('source_id', property.id).eq('user_id', userId);
-  await supabase.from('income').delete().eq('source_id', property.id).eq('source_type', 'rental_property').eq('user_id', userId);
 
   await maybeSnapshot(userId);
 }
