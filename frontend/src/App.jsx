@@ -52,42 +52,38 @@ function BottomTabBar() {
   if (publicRoutes.includes(location.pathname)) return null;
 
   return (
-    <>
-      {/* spacer so content isn't hidden behind the bar */}
-      <div style={{ height: 64 }} className="md:hidden" aria-hidden="true" />
-      <nav
-        aria-label="Mobile tab navigation"
-        style={{
-          position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 50,
-          background: '#1A3A2A',
-          backdropFilter: 'blur(0px)',
-          borderTop: '1px solid rgba(255,255,255,0.08)',
-          display: 'flex',
-          paddingBottom: 'env(safe-area-inset-bottom)',
-        }}
-        className="md:hidden"
-      >
-        {MOBILE_TABS.map(({ path, label, icon }) => (
-          <NavLink
-            key={path}
-            to={path}
-            style={({ isActive }) => ({
-              flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center',
-              justifyContent: 'center', gap: 3, padding: '8px 4px',
-              textDecoration: 'none', fontSize: 9, fontWeight: 500,
-              letterSpacing: '0.04em', textTransform: 'uppercase',
-              color: isActive ? '#C9972B' : 'rgba(200,222,206,0.55)',
-              transition: 'color 0.15s',
-            })}
-          >
-            {icon}
-            {label}
-          </NavLink>
-        ))}
-      </nav>
-    </>
+    <nav
+      aria-label="Mobile tab navigation"
+      style={{
+        position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 50,
+        background: '#1A3A2A',
+        borderTop: '1px solid rgba(255,255,255,0.08)',
+        display: 'flex',
+        paddingBottom: 'env(safe-area-inset-bottom)',
+      }}
+      className="md:hidden"
+    >
+      {MOBILE_TABS.map(({ path, label, icon }) => (
+        <NavLink
+          key={path}
+          to={path}
+          style={({ isActive }) => ({
+            flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center',
+            justifyContent: 'center', gap: 3, padding: '8px 4px',
+            textDecoration: 'none', fontSize: 9, fontWeight: 500,
+            letterSpacing: '0.04em', textTransform: 'uppercase',
+            color: isActive ? '#C9972B' : 'rgba(200,222,206,0.55)',
+            transition: 'color 0.15s',
+          })}
+        >
+          {icon}
+          {label}
+        </NavLink>
+      ))}
+    </nav>
   );
 }
+
 
 // ── Protected route wrapper ──────────────────────────────────────────────────
 function ProtectedRoute({ children }) {
@@ -96,15 +92,19 @@ function ProtectedRoute({ children }) {
   if (!session) return <Navigate to="/login" replace />;
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: '#F5F0E8' }}>
-      {/* Sidebar (fixed — takes 240px on desktop) */}
+      {/* Sidebar — fixed 240px on desktop, hidden slide-in drawer on mobile */}
       <Navbar />
-      {/* Spacer for the fixed sidebar on desktop */}
+      {/* Push content right of the fixed sidebar on desktop */}
       <div style={{ width: 240, flexShrink: 0 }} className="hidden md:block" />
-      {/* Main content */}
-      <main style={{ flex: 1, minHeight: '100vh', overflowX: 'hidden' }}>
-        {/* Top spacer for mobile header */}
-        <div style={{ height: 56 }} className="md:hidden" />
-        <div style={{ maxWidth: 1200, margin: '0 auto', padding: '32px 24px' }}>
+      {/* Main content
+            Mobile: pt-14 (56px) clears the fixed top bar,
+                    pb-20 (80px) clears the fixed bottom tab bar.
+            Desktop: pt-8 normal top padding, no bottom bar. */}
+      <main
+        style={{ flex: 1, overflowX: 'hidden' }}
+        className="pt-14 pb-20 md:pt-8 md:pb-8"
+      >
+        <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 24px' }}>
           {children}
         </div>
       </main>

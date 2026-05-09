@@ -141,3 +141,4 @@ ON public.profiles FOR ALL USING (auth.uid() = id);
 -- RENTAL: is_active flag (soft-delete / deactivate)
 -- ============================================================
 ALTER TABLE public.rental_properties ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
+
