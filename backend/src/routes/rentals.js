@@ -65,63 +65,9 @@ async function upsertIntegrations(userId, property, snapshotDate = null) {
     await supabase.from('liabilities').delete().eq('source_id', property.id).eq('source_type', 'rental_property');
   }
 
-  // BUDGET LINE ITEM FOR MORTGAGE P&I + Escrow (Fixed Monthly)
-  const mortgageAmount = (Number(property.mortgage_pi) || 0) + (Number(property.mortgage_escrow) || 0);
-  if (mortgageAmount > 0) {
-    const { data: b1Check } = await supabase.from('budget_line_items').select('id').eq('source_id', property.id).eq('source_type', 'rental_property_mortgage').maybeSingle();
-    const b1Data = {
-      user_id: userId,
-      section: 'fixed_monthly',
-      category: `${property.property_name} Mortgage`,
-      amount: mortgageAmount,
-      is_auto_injected: true,
-      source_id: property.id,
-      source_type: 'rental_property_mortgage'
-    };
-    if (b1Check) await supabase.from('budget_line_items').update(b1Data).eq('id', b1Check.id);
-    else await supabase.from('budget_line_items').insert([b1Data]);
-  } else {
-    await supabase.from('budget_line_items').delete().eq('source_id', property.id).eq('source_type', 'rental_property_mortgage');
-  }
-
-  // 3. INCOME (Rent)
-  if (Number(property.rent) > 0) {
-    const { data: incCheck } = await supabase.from('income').select('id').eq('source_id', property.id).eq('source_type', 'rental_property').maybeSingle();
-    const incData = {
-      user_id: userId,
-      name: `${property.property_name} Rent`,
-      type: 'Rental',
-      frequency: 'Monthly',
-      amount: property.rent,
-      gross_income: property.rent,
-      is_auto_injected: true,
-      source_id: property.id,
-      source_type: 'rental_property',
-      updated_at: new Date().toISOString()
-    };
-    if (incCheck) await supabase.from('income').update(incData).eq('id', incCheck.id);
-    else await supabase.from('income').insert([incData]);
-  } else {
-    await supabase.from('income').delete().eq('source_id', property.id).eq('source_type', 'rental_property');
-  }
-
-  // 4. BUDGET LINE ITEM FOR PM FEES
-  if (Number(property.property_management_fees) > 0) {
-    const { data: b2Check } = await supabase.from('budget_line_items').select('id').eq('source_id', property.id).eq('source_type', 'rental_property_pm').maybeSingle();
-    const b2Data = {
-      user_id: userId,
-      section: 'fixed_monthly',
-      category: `${property.property_name} PM Fees`,
-      amount: property.property_management_fees,
-      is_auto_injected: true,
-      source_id: property.id,
-      source_type: 'rental_property_pm'
-    };
-    if (b2Check) await supabase.from('budget_line_items').update(b2Data).eq('id', b2Check.id);
-    else await supabase.from('budget_line_items').insert([b2Data]);
-  } else {
-    await supabase.from('budget_line_items').delete().eq('source_id', property.id).eq('source_type', 'rental_property_pm');
-  }
+  // Clean up any previously auto-injected budget/income entries (from older versions)
+  await supabase.from('budget_line_items').delete().eq('source_id', property.id).eq('user_id', userId);
+  await supabase.from('income').delete().eq('source_id', property.id).eq('source_type', 'rental_property').eq('user_id', userId);
 
   await maybeSnapshot(userId);
 }
@@ -129,8 +75,9 @@ async function upsertIntegrations(userId, property, snapshotDate = null) {
 async function deleteIntegrations(userId, propertyId) {
   await supabase.from('assets').delete().eq('source_id', propertyId).eq('user_id', userId);
   await supabase.from('liabilities').delete().eq('source_id', propertyId).eq('user_id', userId);
-  await supabase.from('income').delete().eq('source_id', propertyId).eq('user_id', userId);
+  // Also clean up any legacy budget/income entries
   await supabase.from('budget_line_items').delete().eq('source_id', propertyId).eq('user_id', userId);
+  await supabase.from('income').delete().eq('source_id', propertyId).eq('user_id', userId);
   await maybeSnapshot(userId);
 }
 
