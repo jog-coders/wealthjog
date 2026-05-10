@@ -2,7 +2,7 @@ import { useDashboard } from '../../hooks/useDashboard';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { formatCurrency } from '../../utils/formatCurrency';
 
-const COLORS = { Assets: '#00D28E', Liabilities: '#EF4444' };
+const COLORS = { Assets: '#00D28E', Liabilities: '#F87171' };
 
 function CustomTooltip({ active, payload }) {
   if (active && payload && payload.length) {
