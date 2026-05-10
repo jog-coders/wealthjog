@@ -45,15 +45,16 @@ export default function BudgetPage() {
 
   return (
     <div className="space-y-8">
-      <div className="bg-white border border-gray-100 rounded-xl px-6 py-5 mb-8">
+      {/* Chart at top */}
+      {currentStep < 4 && <BudgetVisuals currentStep={currentStep} />}
+
+      <div className="bg-white border border-gray-100 rounded-xl px-6 py-5">
         <Stepper steps={STEPS} currentStep={currentStep} onStepClick={setCurrentStep} />
       </div>
 
       <div className="bg-white border border-gray-100 rounded-xl p-6">
         {renderStep()}
       </div>
-
-      {currentStep < 4 && <BudgetVisuals currentStep={currentStep} />}
     </div>
   );
 }
