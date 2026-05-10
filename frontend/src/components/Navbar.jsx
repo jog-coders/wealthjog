@@ -78,46 +78,48 @@ export default function Navbar() {
       {/* ── Top Nav Bar ── */}
       <header style={{
         position: 'fixed', top: 0, left: 0, right: 0, height: 64, zIndex: 50,
-        background: '#F4F5F7',                          // same as page — no separation
-        borderBottom: scrolled
-          ? '1px solid rgba(0,0,0,0.07)'
-          : '1px solid transparent',
+        background: '#F4F5F7',
+        borderBottom: scrolled ? '1px solid rgba(0,0,0,0.07)' : '1px solid transparent',
         boxShadow: scrolled ? '0 2px 12px rgba(0,0,0,0.06)' : 'none',
         transition: 'border-color 0.2s, box-shadow 0.2s',
-        display: 'flex', alignItems: 'center',
-        padding: '0 24px',
-        gap: 8,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '0 16px',
+        width: '100%',
+        boxSizing: 'border-box',
+        overflow: 'hidden',
       }}>
         {/* Logo */}
-        <NavLink to="/dashboard" style={{ display: 'flex', alignItems: 'center', gap: 9, textDecoration: 'none', flexShrink: 0 }}>
-          <LogoMark size={30} />
-          <span style={{ fontSize: 16, fontWeight: 800, color: '#111827', letterSpacing: '-0.03em' }}>
+        <NavLink
+          to="/dashboard"
+          style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none', flexShrink: 0 }}
+        >
+          <LogoMark size={28} />
+          <span style={{ fontSize: 15, fontWeight: 800, color: '#111827', letterSpacing: '-0.03em', whiteSpace: 'nowrap' }}>
             Wealth<span style={{ color: '#FF6548' }}>JOG</span>
           </span>
         </NavLink>
 
-        {/* Spacer */}
-        <div style={{ flex: 1 }} />
-
-        {/* Desktop nav pills */}
-        <nav style={{ display: 'flex', alignItems: 'center', gap: 2 }} className="hidden md:flex" aria-label="Main navigation">
+        {/* Desktop center nav pills */}
+        <nav
+          style={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1, justifyContent: 'center', padding: '0 16px' }}
+          className="hidden md:flex"
+          aria-label="Main navigation"
+        >
           {NAV_ITEMS.map(({ path, label }) => (
             <NavLink
               key={path}
               to={path}
               style={({ isActive }) => ({
-                display: 'inline-flex',
-                alignItems: 'center',
+                display: 'inline-flex', alignItems: 'center',
                 padding: '6px 14px',
                 borderRadius: 9999,
-                fontSize: 13.5,
-                fontWeight: isActive ? 600 : 500,
-                textDecoration: 'none',
-                letterSpacing: '0.01em',
+                fontSize: 13, fontWeight: isActive ? 600 : 500,
+                textDecoration: 'none', letterSpacing: '0.01em',
                 background: isActive ? '#FF6548' : 'transparent',
                 color: isActive ? '#FFFFFF' : '#6B7280',
                 boxShadow: isActive ? '0 2px 8px rgba(255,101,72,0.3)' : 'none',
                 transition: 'all 0.15s',
+                whiteSpace: 'nowrap',
               })}
             >
               {label}
@@ -125,30 +127,22 @@ export default function Navbar() {
           ))}
         </nav>
 
-        {/* Spacer */}
-        <div style={{ flex: 1 }} />
-
-        {/* User avatar + sign out */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+        {/* Right side: avatar + sign-out (desktop) + hamburger (mobile) */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
           <div style={{
-            width: 34, height: 34, borderRadius: '50%',
+            width: 32, height: 32, borderRadius: '50%',
             background: 'rgba(255,101,72,0.12)',
             border: '1.5px solid rgba(255,101,72,0.3)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 12, fontWeight: 700, color: '#FF6548',
+            fontSize: 11, fontWeight: 700, color: '#FF6548',
             letterSpacing: '0.04em', flexShrink: 0,
-            cursor: 'default',
           }}>
             {initials}
           </div>
           <button
             onClick={handleSignOut}
             title="Sign out"
-            style={{
-              background: 'none', border: 'none', cursor: 'pointer',
-              color: '#9CA3AF', padding: '4px 6px', borderRadius: 8,
-              transition: 'color 0.15s',
-            }}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9CA3AF', padding: '4px', borderRadius: 8, transition: 'color 0.15s', flexShrink: 0 }}
             onMouseEnter={e => e.currentTarget.style.color = '#EF4444'}
             onMouseLeave={e => e.currentTarget.style.color = '#9CA3AF'}
             className="hidden md:block"
@@ -159,16 +153,16 @@ export default function Navbar() {
               <line x1="21" y1="12" x2="9" y2="12"/>
             </svg>
           </button>
-
           {/* Mobile hamburger */}
           <button
             onClick={() => setMobileMenuOpen(o => !o)}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6B7280', padding: 4, borderRadius: 8 }}
+            aria-label="Toggle menu"
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6B7280', padding: '4px', borderRadius: 8, flexShrink: 0 }}
             className="md:hidden"
           >
             {mobileMenuOpen
-              ? <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-              : <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+              ? <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              : <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
             }
           </button>
         </div>

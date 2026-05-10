@@ -39,11 +39,13 @@ function ProtectedRoute({ children }) {
       {/* Fixed top nav (64px tall) */}
       <Navbar />
 
-      {/* Content area
-          Desktop : pt-16 (64px) clears the fixed nav
-          Mobile  : pt-16 (64px) clears top bar + pb-20 (80px) clears bottom tab bar */}
-      <main className="pt-16 pb-6 md:pb-10 pb-[88px] md:pb-10">
-        <div style={{ maxWidth: 1200, margin: '0 auto', padding: '24px 24px 0' }}>
+      {/* Content area — pt-16 clears fixed nav on all sizes,
+          extra bottom padding on mobile clears the bottom tab bar */}
+      <main style={{ paddingTop: 64, paddingBottom: 0 }}>
+        <div
+          style={{ maxWidth: 1200, margin: '0 auto', padding: '24px 16px 96px' }}
+          className="md:px-6 md:pb-10"
+        >
           {children}
         </div>
       </main>
