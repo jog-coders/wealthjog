@@ -5,13 +5,13 @@ import { useAppContext } from '../context/AppContext';
 
 function LogoMark({ size = 52 }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 88 88" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="44" cy="44" r="44" fill="#FF6548" />
-      <line x1="8"  y1="33" x2="23" y2="33" stroke="white" strokeWidth="4" strokeLinecap="round" strokeOpacity="0.6" />
-      <line x1="5"  y1="44" x2="23" y2="44" stroke="white" strokeWidth="4" strokeLinecap="round" strokeOpacity="0.6" />
-      <line x1="8"  y1="55" x2="23" y2="55" stroke="white" strokeWidth="4" strokeLinecap="round" strokeOpacity="0.6" />
-      <line x1="27" y1="61" x2="64" y2="25" stroke="white" strokeWidth="5" strokeLinecap="round" />
-      <polyline points="45,25 64,25 64,44" fill="none" stroke="white" strokeWidth="4.5" strokeLinecap="round" strokeLinejoin="round" />
+    <svg width={size} height={size} viewBox="0 0 88 88" fill="none">
+      <circle cx="44" cy="44" r="44" fill="#00D28E" />
+      <line x1="8"  y1="33" x2="23" y2="33" stroke="#0F172A" strokeWidth="4" strokeLinecap="round" strokeOpacity="0.6" />
+      <line x1="5"  y1="44" x2="23" y2="44" stroke="#0F172A" strokeWidth="4" strokeLinecap="round" strokeOpacity="0.6" />
+      <line x1="8"  y1="55" x2="23" y2="55" stroke="#0F172A" strokeWidth="4" strokeLinecap="round" strokeOpacity="0.6" />
+      <line x1="27" y1="61" x2="64" y2="25" stroke="#0F172A" strokeWidth="5" strokeLinecap="round" />
+      <polyline points="45,25 64,25 64,44" fill="none" stroke="#0F172A" strokeWidth="4.5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -54,39 +54,44 @@ export default function LoginPage() {
   return (
     <div style={{
       minHeight: '100vh',
-      background: '#F4F5F7',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
+      background: '#0F172A',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
       padding: '24px 16px',
+      position: 'relative', overflow: 'hidden',
     }}>
-      <div style={{ width: '100%', maxWidth: 400 }}>
+      {/* Glow orb background */}
+      <div style={{
+        position: 'absolute', width: 480, height: 480, borderRadius: '50%',
+        background: 'radial-gradient(circle, rgba(0,210,142,0.08) 0%, transparent 70%)',
+        top: '50%', left: '50%', transform: 'translate(-50%,-50%)',
+        pointerEvents: 'none',
+      }} />
+
+      <div style={{ width: '100%', maxWidth: 400, position: 'relative', zIndex: 1 }}>
         {/* Brand */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 32 }}>
           <LogoMark size={56} />
-          <h1 style={{ margin: '16px 0 6px', fontSize: 26, fontWeight: 800, color: '#111827', letterSpacing: '-0.03em' }}>
-            Wealth<span style={{ color: '#FF6548' }}>JOG</span>
+          <h1 style={{ margin: '16px 0 6px', fontSize: 26, fontWeight: 800, color: '#F8FAFC', letterSpacing: '-0.03em' }}>
+            Wealth<span style={{ color: '#00D28E' }}>JOG</span>
           </h1>
-          <p style={{ margin: 0, fontSize: 13, color: '#9CA3AF', letterSpacing: '0.03em' }}>
-            Every dollar has a direction
-          </p>
+          <p style={{ margin: 0, fontSize: 13, color: '#64748B' }}>Every dollar has a direction</p>
         </div>
 
         {/* Card */}
         <div style={{
-          background: '#FFFFFF',
-          border: '1px solid #E5E7EB',
+          background: 'rgba(30,41,59,0.80)',
+          backdropFilter: 'blur(12px)',
+          border: '1px solid rgba(255,255,255,0.06)',
           borderRadius: 20,
           padding: '36px 32px',
-          boxShadow: '0 4px 16px rgba(0,0,0,0.07), 0 1px 3px rgba(0,0,0,0.05)',
+          boxShadow: '0 0 40px rgba(0,210,142,0.08), 0 8px 32px rgba(0,0,0,0.5)',
         }}>
-          <p style={{ margin: '0 0 22px', fontSize: 13, fontWeight: 600, color: '#6B7280', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+          <p style={{ margin: '0 0 22px', fontSize: 11, fontWeight: 700, color: '#64748B', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
             Sign in to your account
           </p>
-
-          <form onSubmit={handleEmailAuth} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+          <form onSubmit={handleEmailAuth} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {error && (
-              <div style={{ background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, padding: '10px 14px', fontSize: 13, color: '#EF4444' }}>
+              <div style={{ background: 'rgba(239,68,68,0.10)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 10, padding: '10px 14px', fontSize: 13, color: '#EF4444' }}>
                 {error}
               </div>
             )}
@@ -103,15 +108,12 @@ export default function LoginPage() {
                 placeholder="••••••••" className="form-input" />
             </div>
             <button type="submit" disabled={loading} className="btn-primary"
-              style={{ width: '100%', marginTop: 4, padding: '13px', fontSize: 14 }}>
+              style={{ width: '100%', marginTop: 6, padding: '13px', fontSize: 14 }}>
               {loading ? 'Signing in…' : 'Sign In →'}
             </button>
           </form>
         </div>
-
-        <p style={{ textAlign: 'center', marginTop: 20, fontSize: 12, color: '#D1D5DB' }}>
-          Access by invitation only
-        </p>
+        <p style={{ textAlign: 'center', marginTop: 20, fontSize: 11, color: '#334155' }}>Access by invitation only</p>
       </div>
     </div>
   );
