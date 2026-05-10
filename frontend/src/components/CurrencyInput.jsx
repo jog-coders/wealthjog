@@ -2,42 +2,47 @@ import { useState, useEffect } from 'react';
 
 export default function CurrencyInput({ value, onChange, placeholder = '0.00' }) {
   const [displayValue, setDisplayValue] = useState('');
-  const [error, setError] = useState('');
 
+  // Sync display when external value changes
   useEffect(() => {
-    if (value !== undefined && value !== null) {
+    if (value !== undefined && value !== null && value !== '') {
       setDisplayValue(Number(value).toFixed(2));
     } else {
       setDisplayValue('');
     }
   }, [value]);
 
-  const handleBlur = () => {
-    let num = Number(displayValue);
-    if (isNaN(num)) num = 0;
-    
-    if (num < 0) {
-      setError('Amount cannot be negative');
-      num = 0;
-    } else {
-      setError('');
+  // Call onChange on every keystroke so parent state is always current.
+  // This fixes the race condition where clicking Save immediately after
+  // typing would see the old amount value (blur fires, but React hadn't
+  // re-rendered before the click handler ran).
+  const handleChange = (e) => {
+    const raw = e.target.value;
+    setDisplayValue(raw);
+    const num = parseFloat(raw);
+    if (!isNaN(num) && num >= 0) {
+      onChange(num);
+    } else if (raw === '' || raw === '-') {
+      // Don't call onChange for incomplete input
     }
-    
-    const formatted = num.toFixed(2);
-    setDisplayValue(formatted);
-    onChange(Number(formatted));
   };
 
-  const handleChange = (e) => {
-    setDisplayValue(e.target.value);
+  // On blur: format display and ensure parent has the final value
+  const handleBlur = () => {
+    let num = parseFloat(displayValue);
+    if (isNaN(num) || num < 0) num = 0;
+    const formatted = num.toFixed(2);
+    setDisplayValue(formatted);
+    onChange(num); // Guarantee parent has the final parsed value
   };
 
   return (
     <div>
-      <div className="relative rounded-lg">
-        <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-          <span className="text-gray-500 sm:text-sm">$</span>
-        </div>
+      <div style={{ position: 'relative' }}>
+        <span style={{
+          position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)',
+          color: '#9CA3AF', fontSize: 13, pointerEvents: 'none',
+        }}>$</span>
         <input
           type="number"
           step="0.01"
@@ -45,13 +50,11 @@ export default function CurrencyInput({ value, onChange, placeholder = '0.00' })
           value={displayValue}
           onChange={handleChange}
           onBlur={handleBlur}
-          className={`block w-full rounded-lg pl-7 pr-3 py-1.5 text-gray-900 ring-1 ring-inset focus:ring-2 focus:ring-inset sm:text-sm sm:leading-6 ${
-            error ? 'ring-red-300 focus:ring-red-500' : 'ring-gray-200 focus:ring-primary-500'
-          }`}
           placeholder={placeholder}
+          className="form-input"
+          style={{ paddingLeft: 26 }}
         />
       </div>
-      {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
     </div>
   );
 }

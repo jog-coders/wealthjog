@@ -14,6 +14,7 @@ export default function LiabilitiesTable() {
   
   const [types, setTypes] = useState([]);
   const [isAdding, setIsAdding] = useState(false);
+  const [isUpdatingBalance, setIsUpdatingBalance] = useState(false);
   const [editingId, setEditingId] = useState(null);
   
   const [name, setName] = useState('');
@@ -37,9 +38,10 @@ export default function LiabilitiesTable() {
     setType(item.type);
     setInstitution(item.institution || '');
     setDate(new Date().toISOString().split('T')[0]);
-    setAmount(0); // Clear amount so they can enter the new one
+    setAmount(0);
     setMonthlyFixedExpense(item.monthly_fixed_expense || 0);
-    setEditingId(null); // It's a new entry for the ledger!
+    setEditingId(null);
+    setIsUpdatingBalance(true);
     setIsAdding(true);
   };
 
@@ -57,6 +59,7 @@ export default function LiabilitiesTable() {
     setAmount(0);
     setMonthlyFixedExpense(0);
     setIsAdding(false);
+    setIsUpdatingBalance(false);
     setEditingId(null);
   };
 
@@ -72,7 +75,9 @@ export default function LiabilitiesTable() {
   };
 
   const handleSave = async () => {
-    if (!name || amount < 0) return;
+    if (!name) return;
+    if (!editingId && amount <= 0) return; // block $0 new entries
+    if (editingId && amount < 0) return;
     
     const payload = { 
       name, 

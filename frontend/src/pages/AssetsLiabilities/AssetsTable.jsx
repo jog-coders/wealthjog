@@ -14,6 +14,7 @@ export default function AssetsTable() {
   
   const [types, setTypes] = useState([]);
   const [isAdding, setIsAdding] = useState(false);
+  const [isUpdatingBalance, setIsUpdatingBalance] = useState(false);
   const [editingId, setEditingId] = useState(null);
   
   const [name, setName] = useState('');
@@ -37,9 +38,10 @@ export default function AssetsTable() {
     setType(item.type);
     setInstitution(item.institution || '');
     setDate(new Date().toISOString().split('T')[0]);
-    setAmount(0); // Clear amount so they can enter the new one
+    setAmount(0); // User must enter the new balance
     setMonthlyFixedSavings(item.monthly_fixed_savings || 0);
-    setEditingId(null); // It's a new entry for the ledger!
+    setEditingId(null); // null = create new ledger entry
+    setIsUpdatingBalance(true);
     setIsAdding(true);
   };
 
@@ -57,6 +59,7 @@ export default function AssetsTable() {
     setAmount(0);
     setMonthlyFixedSavings(0);
     setIsAdding(false);
+    setIsUpdatingBalance(false);
     setEditingId(null);
   };
 
@@ -72,7 +75,10 @@ export default function AssetsTable() {
   };
 
   const handleSave = async () => {
-    if (!name || amount < 0) return;
+    if (!name) return;
+    // Block $0 saves — a balance update must have a positive amount
+    if (!editingId && amount <= 0) return;
+    if (editingId && amount < 0) return;
     
     const payload = { 
       name, 
@@ -137,6 +143,10 @@ export default function AssetsTable() {
 
       {isAdding && (
         <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
+          {/* Mode banner */}
+          <div style={{ marginBottom: 16, padding: '8px 12px', borderRadius: 8, background: isUpdatingBalance ? 'rgba(255,101,72,0.07)' : 'rgba(5,150,105,0.07)', border: `1px solid ${isUpdatingBalance ? 'rgba(255,101,72,0.2)' : 'rgba(5,150,105,0.2)'}`, fontSize: 13, fontWeight: 600, color: isUpdatingBalance ? '#FF6548' : '#059669' }}>
+            {isUpdatingBalance ? `📊 Updating balance for: ${name}` : '➕ Add New Asset'}
+          </div>
           <div className="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
             <div className="sm:col-span-2">
               <label className="block text-sm font-medium text-gray-600">Name *</label>
