@@ -24,7 +24,7 @@ export default function NetWorthHistory() {
 
   const cardStyle = {
     background: '#1E293B', border: '1px solid #334155', borderRadius: 16,
-    padding: '20px 24px', height: '100%', display: 'flex', flexDirection: 'column',
+    padding: '20px 24px',
     boxShadow: '0 0 24px rgba(0,210,142,0.06)',
   };
 
@@ -32,7 +32,7 @@ export default function NetWorthHistory() {
     <div style={cardStyle}>
       <h3 style={{ margin: '0 0 16px', fontSize: 15, fontWeight: 700, color: '#F8FAFC' }}>Net Worth Trend</h3>
 
-      <div style={{ flex: 1, minHeight: 220 }}>
+      <div style={{ height: 260, position: 'relative' }}>
         {formattedData.length === 0 ? (
           <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, color: '#64748B', fontSize: 13, textAlign: 'center' }}>
             <p style={{ margin: 0 }}>No historical data yet.</p>

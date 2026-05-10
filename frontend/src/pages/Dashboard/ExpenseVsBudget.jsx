@@ -5,7 +5,6 @@ import { formatCurrency } from '../../utils/formatCurrency';
 
 export default function ExpenseVsBudget() {
   const { get } = useApi();
-  
   const currentMonthStr = new Date().toISOString().substring(0, 7);
   const [month, setMonth] = useState(currentMonthStr);
   const [data, setData] = useState([]);
@@ -16,27 +15,25 @@ export default function ExpenseVsBudget() {
     const fetchData = async () => {
       setLoading(true);
       const { data: resData } = await get(`/api/dashboard/expense-vs-budget?month=${month}`);
-      if (isMounted && resData) {
-        setData(resData);
-      }
+      if (isMounted && resData) setData(resData);
       if (isMounted) setLoading(false);
     };
     fetchData();
     return () => { isMounted = false; };
   }, [month, get]);
 
-  const CustomTooltip = ({ active, payload, label }) => {
+  const DarkTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       return (
-        <div className="bg-white p-3 border border-gray-200 rounded text-sm">
-          <p className="font-semibold mb-1">{label}</p>
-          <p style={{ color: payload[0].color }}>Budgeted: {formatCurrency(payload[0].value)}</p>
-          <p style={{ color: payload[1].color }}>Actual: {formatCurrency(payload[1].value)}</p>
-          <div className="mt-2 pt-2 border-t border-gray-100">
-            {payload[1].value > payload[0].value ? (
-              <p className="text-red-600 text-xs font-bold">Over budget by {formatCurrency(payload[1].value - payload[0].value)}</p>
+        <div style={{ background: '#1E293B', border: '1px solid #334155', borderRadius: 10, padding: '10px 14px', boxShadow: '0 8px 24px rgba(0,0,0,0.5)', fontSize: 12 }}>
+          <p style={{ margin: '0 0 6px', fontWeight: 600, color: '#F8FAFC' }}>{label}</p>
+          <p style={{ margin: '2px 0', color: '#38BDF8' }}>Budgeted: {formatCurrency(payload[0]?.value)}</p>
+          <p style={{ margin: '2px 0', color: '#FF6C00' }}>Actual: {formatCurrency(payload[1]?.value)}</p>
+          <div style={{ marginTop: 6, paddingTop: 6, borderTop: '1px solid #334155' }}>
+            {payload[1]?.value > payload[0]?.value ? (
+              <p style={{ margin: 0, color: '#EF4444', fontWeight: 700, fontSize: 11 }}>Over by {formatCurrency(payload[1].value - payload[0].value)}</p>
             ) : (
-              <p className="text-green-600 text-xs font-bold">Under budget by {formatCurrency(payload[0].value - payload[1].value)}</p>
+              <p style={{ margin: 0, color: '#00D28E', fontWeight: 700, fontSize: 11 }}>Under by {formatCurrency(payload[0].value - payload[1].value)}</p>
             )}
           </div>
         </div>
@@ -46,34 +43,35 @@ export default function ExpenseVsBudget() {
   };
 
   return (
-    <div className="bg-white border border-gray-100 rounded-xl p-6 flex flex-col h-full">
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-medium text-gray-900">Expense vs Budget</h3>
-        <input 
-          type="month" 
-          value={month} 
-          onChange={e => setMonth(e.target.value)} 
-          className="rounded-lg border-0 py-1 text-gray-900 ring-1 ring-inset ring-gray-200 sm:text-sm px-2"
+    <div style={{ background: '#1E293B', border: '1px solid #334155', borderRadius: 16, padding: '20px 24px', boxShadow: '0 1px 3px rgba(0,0,0,0.4)' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, gap: 12 }}>
+        <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#F8FAFC' }}>Expense vs Budget</h3>
+        <input
+          type="month"
+          value={month}
+          onChange={e => setMonth(e.target.value)}
+          className="form-input"
+          style={{ width: 'auto', padding: '4px 10px', fontSize: 12 }}
         />
       </div>
-      
-      <div className="flex-grow h-64 min-h-[16rem]">
+
+      <div style={{ height: 260 }}>
         {loading ? (
-          <div className="h-full flex items-center justify-center text-gray-400">Loading...</div>
+          <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748B', fontSize: 13 }}>Loading…</div>
         ) : data.length === 0 ? (
-          <div className="h-full flex items-center justify-center text-gray-400 text-sm text-center">
+          <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748B', fontSize: 13, textAlign: 'center' }}>
             No budget or expenses found for this month.
           </div>
         ) : (
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={data} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-              <XAxis type="number" tickFormatter={(val) => `$${val}`} />
-              <YAxis dataKey="category" type="category" width={100} tick={{fontSize: 12}} />
-              <Tooltip content={<CustomTooltip />} />
-              <Legend />
-              <Bar dataKey="budgeted" name="Budgeted" fill="#3b82f6" radius={[0, 4, 4, 0]} />
-              <Bar dataKey="actual" name="Actual" fill="#f87171" radius={[0, 4, 4, 0]} />
+            <BarChart data={data} layout="vertical" margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="rgba(51,65,85,0.5)" />
+              <XAxis type="number" tickFormatter={(val) => `$${val}`} tick={{ fill: '#64748B', fontSize: 10 }} axisLine={false} tickLine={false} />
+              <YAxis dataKey="category" type="category" width={90} tick={{ fill: '#94A3B8', fontSize: 11 }} axisLine={false} tickLine={false} />
+              <Tooltip content={<DarkTooltip />} />
+              <Legend wrapperStyle={{ fontSize: 11, color: '#94A3B8' }} />
+              <Bar dataKey="budgeted" name="Budgeted" fill="#38BDF8" radius={[0, 4, 4, 0]} />
+              <Bar dataKey="actual"   name="Actual"   fill="#FF6C00" radius={[0, 4, 4, 0]} />
             </BarChart>
           </ResponsiveContainer>
         )}

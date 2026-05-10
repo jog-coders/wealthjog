@@ -52,7 +52,7 @@ export default function NetWorthSnapshot() {
   const renderCustomLabel = ({ cx, cy }) => <CenterLabel cx={cx} cy={cy} netWorth={netWorth} />;
 
   return (
-    <div style={{ background: '#1E293B', border: '1px solid #334155', borderRadius: 16, padding: '20px 24px', boxShadow: '0 0 24px rgba(0,210,142,0.08)', height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ background: '#1E293B', border: '1px solid #334155', borderRadius: 16, padding: '20px 24px', boxShadow: '0 0 24px rgba(0,210,142,0.08)' }}>
       <h3 style={{ margin: '0 0 16px', fontSize: 15, fontWeight: 700, color: '#F8FAFC' }}>Net Worth Snapshot</h3>
 
       {/* Summary pills */}
@@ -72,7 +72,7 @@ export default function NetWorthSnapshot() {
       </div>
 
       {/* Donut */}
-      <div style={{ flex: 1, minHeight: 200 }}>
+      <div style={{ height: 240 }}>
         {isEmpty ? (
           <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748B', fontSize: 13 }}>No data yet</div>
         ) : (
