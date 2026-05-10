@@ -37,9 +37,9 @@ function ProtectedRoute({ children }) {
   return (
     <div style={{ minHeight: '100vh', background: '#F4F5F7', width: '100%', overflowX: 'hidden' }}>
       <Navbar />
-      {/* paddingTop=64 clears the fixed top nav.
-          paddingBottom=88 clears the mobile bottom tab bar. */}
-      <main style={{ paddingTop: 64, paddingBottom: 88, width: '100%', overflowX: 'hidden' }}>
+      {/* paddingTop clears fixed nav: 56px mobile, 64px desktop.
+          paddingBottom 88px clears the mobile bottom tab bar. */}
+      <main style={{ paddingBottom: 88, width: '100%', overflowX: 'hidden' }} className="pt-14 md:pt-16">
         <div style={{ maxWidth: 1200, margin: '0 auto', padding: '20px 16px', width: '100%', boxSizing: 'border-box' }}>
           {children}
         </div>
