@@ -20,6 +20,21 @@ function getTypeColor(type, idx) {
   return TYPE_COLORS[type] || PALETTE[idx % PALETTE.length];
 }
 
+// ── Color utilities ───────────────────────────────────────────────────────────
+function lightenHex(hex, amount = 0.35) {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  const lr = Math.round(r + (255 - r) * amount);
+  const lg = Math.round(g + (255 - g) * amount);
+  const lb = Math.round(b + (255 - b) * amount);
+  return `rgb(${lr},${lg},${lb})`;
+}
+
+function gradId(color) {
+  return `tg${color.replace('#', '')}`;
+}
+
 // ── Dark tooltip ──────────────────────────────────────────────────────────────
 function DarkTooltip({ active, payload }) {
   if (!active || !payload || !payload.length) return null;
@@ -54,22 +69,27 @@ function CustomCell(props) {
   if (width < 2 || height < 2) return <g />;
 
   const safeColor = color || '#00D28E';
+  const gid       = `tg${safeColor.replace('#', '')}`;
   const safeName  = String(name);
   const showLabel = width > 60 && height > 36;
   const showValue = width > 80 && height > 54;
 
   return (
     <g>
+      {/* Glow bloom behind cell */}
+      <rect x={x} y={y} width={width} height={height}
+        rx={8} fill={safeColor} fillOpacity={0.12} />
+      {/* Gradient-filled cell */}
       <rect
         x={x + 1} y={y + 1}
         width={Math.max(width - 2, 0)} height={Math.max(height - 2, 0)}
-        rx={6} fill={safeColor} fillOpacity={0.85}
-        stroke={safeColor} strokeWidth={1} strokeOpacity={0.4}
+        rx={7} fill={`url(#${gid})`}
+        stroke={safeColor} strokeWidth={1} strokeOpacity={0.35}
       />
       {showLabel && (
         <text
-          x={x + 8} y={y + 18}
-          fill="#0F172A" fontSize={11} fontWeight={700}
+          x={x + 10} y={y + 20}
+          fill="#0A1628" fontSize={11} fontWeight={700}
           style={{ pointerEvents: 'none', userSelect: 'none' }}
         >
           {safeName.length > 14 ? safeName.slice(0, 13) + '…' : safeName}
@@ -77,8 +97,8 @@ function CustomCell(props) {
       )}
       {showValue && (
         <text
-          x={x + 8} y={y + 33}
-          fill="rgba(0,0,0,0.6)" fontSize={10}
+          x={x + 10} y={y + 35}
+          fill="rgba(0,0,0,0.55)" fontSize={10}
           style={{ pointerEvents: 'none', userSelect: 'none' }}
         >
           {formatCurrency(value)}  ·  {pct}%
@@ -126,6 +146,9 @@ export default function AssetsLiabilitiesVisuals() {
       .map(([type, { amount, color }]) => ({ type, amount, color }));
   }, [assets]);
 
+  // Unique colors for gradient defs
+  const uniqueColors = useMemo(() => [...new Set(treeData.map(d => d.color).filter(Boolean))], [treeData]);
+
   const isEmpty = treeData.length === 0;
 
   return (
@@ -163,6 +186,19 @@ export default function AssetsLiabilitiesVisuals() {
             ))}
           </div>
         </div>
+
+        {/* Hidden SVG gradient + filter defs — referenced by all treemap cells */}
+        <svg width={0} height={0} style={{ position: 'absolute', overflow: 'hidden' }} aria-hidden>
+          <defs>
+            {uniqueColors.map(color => (
+              <linearGradient key={color} id={gradId(color)} x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%"   stopColor={lightenHex(color, 0.28)} stopOpacity={1}   />
+                <stop offset="55%"  stopColor={color}                   stopOpacity={0.95}/>
+                <stop offset="100%" stopColor={color}                   stopOpacity={0.7} />
+              </linearGradient>
+            ))}
+          </defs>
+        </svg>
 
         {isEmpty ? (
           <div style={{ height: 280, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 10, color: '#475569', fontSize: 13, textAlign: 'center' }}>
