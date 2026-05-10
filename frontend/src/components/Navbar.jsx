@@ -85,6 +85,7 @@ export default function Navbar() {
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '0 16px',
         width: '100%',
+        maxWidth: '100vw',
         boxSizing: 'border-box',
         overflow: 'hidden',
       }}>

@@ -35,17 +35,12 @@ function ProtectedRoute({ children }) {
   if (!session) return <Navigate to="/login" replace />;
 
   return (
-    <div style={{ minHeight: '100vh', background: '#F4F5F7' }}>
-      {/* Fixed top nav (64px tall) */}
+    <div style={{ minHeight: '100vh', background: '#F4F5F7', width: '100%', overflowX: 'hidden' }}>
       <Navbar />
-
-      {/* Content area — pt-16 clears fixed nav on all sizes,
-          extra bottom padding on mobile clears the bottom tab bar */}
-      <main style={{ paddingTop: 64, paddingBottom: 0 }}>
-        <div
-          style={{ maxWidth: 1200, margin: '0 auto', padding: '24px 16px 96px' }}
-          className="md:px-6 md:pb-10"
-        >
+      {/* paddingTop=64 clears the fixed top nav.
+          paddingBottom=88 clears the mobile bottom tab bar. */}
+      <main style={{ paddingTop: 64, paddingBottom: 88, width: '100%', overflowX: 'hidden' }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto', padding: '20px 16px', width: '100%', boxSizing: 'border-box' }}>
           {children}
         </div>
       </main>
