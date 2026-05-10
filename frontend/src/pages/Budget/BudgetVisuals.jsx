@@ -2,7 +2,7 @@ import { useBudget } from '../../hooks/useBudget';
 import { useIncome } from '../../hooks/useIncome';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
-  ResponsiveContainer, PieChart, Pie, Cell,
+  ResponsiveContainer, PieChart, Pie, Cell, Label,
 } from 'recharts';
 import { getCategoryColorMap, getCategoryColor, PALETTE } from '../../utils/categoryColors';
 import { formatCurrency } from '../../utils/formatCurrency';
@@ -60,8 +60,10 @@ function buildBarGradients(keys) {
   });
 }
 
-// ── Donut center label ────────────────────────────────────────────────────────
-function DonutCenter({ cx, cy, total }) {
+// ── Donut center label (used via recharts <Label> inside <Pie>) ───────────────
+function DonutCenter({ viewBox, total }) {
+  if (!viewBox) return null;
+  const { cx, cy } = viewBox;
   return (
     <g>
       <text x={cx} y={cy - 10} textAnchor="middle" fill="#64748B" fontSize={10} fontWeight={600} letterSpacing="0.05em">
@@ -147,11 +149,10 @@ export default function BudgetVisuals({ currentStep }) {
   if (!visuals) return null;
 
   const { titleBar, titlePie, barData, pieData, barKeys, stackedBar } = visuals;
-  const barGrads = buildBarGradients(barKeys);
+  const barGrads  = buildBarGradients(barKeys);
   const allPieNames = pieData.map(d => d.name);
   const colorMap    = getCategoryColorMap(allPieNames);
   const pieTotal    = pieData.reduce((s, d) => s + d.value, 0);
-  const donutCenterLabel = ({ viewBox: { cx, cy } }) => <DonutCenter cx={cx} cy={cy} total={pieTotal} />;
 
   const cardStyle = {
     background: '#1E293B',
@@ -229,7 +230,6 @@ export default function BudgetVisuals({ currentStep }) {
                   paddingAngle={2}
                   dataKey="value"
                   labelLine={false}
-                  label={donutCenterLabel}
                   animationBegin={0} animationDuration={700}
                 >
                   {pieData.map((entry, i) => (
@@ -237,6 +237,7 @@ export default function BudgetVisuals({ currentStep }) {
                       stroke="rgba(15,23,42,0.4)" strokeWidth={1}
                     />
                   ))}
+                  <Label content={<DonutCenter total={pieTotal} />} position="center" />
                 </Pie>
                 <Tooltip content={<DarkTooltip />} />
                 <Legend
