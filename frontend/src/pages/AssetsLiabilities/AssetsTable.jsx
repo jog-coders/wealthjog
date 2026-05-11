@@ -190,9 +190,8 @@ export default function AssetsTable() {
 
       {isAdding && (
         <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
-          {/* Mode banner */}
-          <div style={{ marginBottom: 16, padding: '8px 12px', borderRadius: 8, background: isUpdatingBalance ? 'rgba(255,101,72,0.07)' : 'rgba(5,150,105,0.07)', border: `1px solid ${isUpdatingBalance ? 'rgba(255,101,72,0.2)' : 'rgba(5,150,105,0.2)'}`, fontSize: 13, fontWeight: 600, color: isUpdatingBalance ? '#FF6548' : '#059669' }}>
-            {isUpdatingBalance ? `📊 Updating balance for: ${name}` : '➕ Add New Asset'}
+        <div style={{ marginBottom: 14, padding: '8px 12px', borderRadius: 8, background: 'rgba(0,210,142,0.07)', border: '1px solid rgba(0,210,142,0.2)', fontSize: 13, fontWeight: 600, color: '#00D28E' }}>
+            ➕ Add New Asset
           </div>
           <div className="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
             <div className="sm:col-span-2">
