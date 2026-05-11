@@ -5,19 +5,74 @@ import { Treemap, ResponsiveContainer, Tooltip } from 'recharts';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { PALETTE } from '../../utils/categoryColors';
 
-// ── Color map for asset types ─────────────────────────────────────────────────
+// ── Named color map — covers all common asset type names & variations ─────────
 const TYPE_COLORS = {
-  'Real Estate':    '#00D28E',
-  'Investment':     '#38BDF8',
-  'Savings':        '#FBBF24',
-  'Retirement':     '#818CF8',
-  'Vehicle':        '#FB923C',
-  'Cash':           '#A3E635',
-  'Crypto':         '#E879F9',
-  'Other':          '#2DD4BF',
+  // Real estate
+  'Real Estate':          '#00D28E',
+  'Property':             '#00D28E',
+  'Home':                 '#00D28E',
+  // Investments
+  'Investment':           '#38BDF8',
+  'Investment Brokerage': '#60A5FA',
+  'Brokerage':            '#60A5FA',
+  'Stock':                '#38BDF8',
+  'Stocks':               '#38BDF8',
+  // Savings
+  'Savings':              '#FBBF24',
+  'Savings Account':      '#FBBF24',
+  'High Yield Savings':   '#F59E0B',
+  // Retirement
+  'Retirement':           '#E879F9',
+  'IRA':                  '#E879F9',
+  '401k':                 '#D946EF',
+  '401(k)':               '#D946EF',
+  'Roth IRA':             '#C026D3',
+  // Checking / Cash
+  'Checkings':            '#34D399',
+  'Checking':             '#34D399',
+  'Checking Account':     '#34D399',
+  'Cash':                 '#A3E635',
+  'Money Market':         '#84CC16',
+  // Vehicle
+  'Vehicle':              '#FB923C',
+  'Car':                  '#FB923C',
+  'Auto':                 '#FB923C',
+  // Crypto
+  'Crypto':               '#818CF8',
+  'Cryptocurrency':       '#818CF8',
+  'Bitcoin':              '#6366F1',
+  // Other
+  'Other':                '#2DD4BF',
+  'Misc':                 '#2DD4BF',
 };
-function getTypeColor(type, idx) {
-  return TYPE_COLORS[type] || PALETTE[idx % PALETTE.length];
+
+// ── Collision-free color assignment ──────────────────────────────────────────
+// Pass 1: assign named colors. Pass 2: unknowns get the next unused palette slot.
+function buildTypeColorMap(typeSet) {
+  const assigned  = {};
+  const usedColors = new Set();
+
+  // Pass 1 — named types
+  typeSet.forEach(type => {
+    if (TYPE_COLORS[type]) {
+      assigned[type] = TYPE_COLORS[type];
+      usedColors.add(TYPE_COLORS[type]);
+    }
+  });
+
+  // Pass 2 — unknown types get next unused palette color
+  let pi = 0;
+  typeSet.forEach(type => {
+    if (!assigned[type]) {
+      while (pi < PALETTE.length && usedColors.has(PALETTE[pi])) pi++;
+      const color = PALETTE[pi % PALETTE.length];
+      assigned[type] = color;
+      usedColors.add(color);
+      pi++;
+    }
+  });
+
+  return assigned;
 }
 
 // ── Color utilities ───────────────────────────────────────────────────────────
@@ -119,8 +174,7 @@ export default function AssetsLiabilitiesVisuals() {
   // Build treemap data — one cell per individual asset
   const treeData = useMemo(() => {
     const typeSet = [...new Set(assets.map(a => a.type || 'Other'))];
-    const tc = {};
-    typeSet.forEach((t, i) => { tc[t] = getTypeColor(t, i); });
+    const tc = buildTypeColorMap(typeSet);
 
     return assets
       .filter(a => Number(a.amount) > 0)
@@ -133,12 +187,14 @@ export default function AssetsLiabilitiesVisuals() {
       }));
   }, [assets, totalAssets]);
 
-  // Color map for legend
+  // Color map for legend — use same buildTypeColorMap so colors stay in sync
   const typeGroups = useMemo(() => {
+    const typeSet = [...new Set(assets.map(a => a.type || 'Other'))];
+    const tc = buildTypeColorMap(typeSet);
     const map = {};
-    assets.forEach((a, i) => {
+    assets.forEach(a => {
       const t = a.type || 'Other';
-      if (!map[t]) map[t] = { amount: 0, color: getTypeColor(t, i) };
+      if (!map[t]) map[t] = { amount: 0, color: tc[t] };
       map[t].amount += Number(a.amount);
     });
     return Object.entries(map)
