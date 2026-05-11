@@ -290,6 +290,18 @@
 thead.bg-gray-50 tr      { background: var(--bg-elevated) !important; }
 thead th                 { color: var(--text-2) !important; }
 
+/* ── Hover variant overrides — Tailwind generates separate classes for hover: ─ */
+/* Without these, hover:bg-gray-50 and hover:bg-white stay light on dark bg     */
+.hover\:bg-gray-50:hover    { background: var(--bg-elevated) !important; }
+.hover\:bg-gray-100:hover   { background: var(--bg-elevated) !important; }
+.hover\:bg-white:hover      { background: var(--bg-elevated) !important; }
+.hover\:bg-gray-200:hover   { background: #2D3F55 !important; }
+
+/* Table row text — must stay readable on both default and hover backgrounds */
+tbody tr td               { color: var(--text-2) !important; }
+tbody tr:hover td         { color: var(--text-1) !important; }
+tbody tr td button        { color: var(--text-1) !important; }
+
 /* ── Animations ────────────────────────────────────────────────────────────── */
 @keyframes fadeUp {
   from { opacity: 0; transform: translateY(6px); }
