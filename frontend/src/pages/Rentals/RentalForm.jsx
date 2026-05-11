@@ -1,50 +1,128 @@
 import { useState, useEffect } from 'react';
 
+// All date fields in this form — empty string → null before submit
+const DATE_FIELDS = [
+  'purchase_date', 'closing_date',
+  'mortgage_maturity_date',
+  'lease_start_date', 'lease_end_date',
+];
+
+// Sanitize payload: empty date strings → null, empty numeric strings → 0
+function sanitize(data) {
+  const out = { ...data };
+  DATE_FIELDS.forEach(f => {
+    if (!out[f] || out[f].trim() === '') out[f] = null;
+  });
+  return out;
+}
+
+function validate(data) {
+  const errors = {};
+  if (!data.property_name?.trim()) errors.property_name = 'Property name is required.';
+
+  // Dates: if provided, must be a valid date string
+  DATE_FIELDS.forEach(f => {
+    const v = data[f];
+    if (v && v.trim() !== '' && isNaN(Date.parse(v))) {
+      errors[f] = 'Enter a valid date (YYYY-MM-DD).';
+    }
+  });
+
+  // Lease: if one date is set, both should be set
+  if (data.lease_start_date && !data.lease_end_date) errors.lease_end_date = 'Lease end date is required if start date is set.';
+  if (data.lease_end_date && !data.lease_start_date) errors.lease_start_date = 'Lease start date is required if end date is set.';
+  if (data.lease_start_date && data.lease_end_date && data.lease_start_date >= data.lease_end_date) {
+    errors.lease_end_date = 'Lease end date must be after start date.';
+  }
+
+  return errors;
+}
+
+// ── Reusable field components ─────────────────────────────────────────────────
+function FieldWrap({ label, error, children, span2 = false }) {
+  return (
+    <div className={span2 ? 'sm:col-span-2' : ''}>
+      <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#94A3B8', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: 5 }}>
+        {label}
+      </label>
+      {children}
+      {error && <p style={{ color: '#F87171', fontSize: 11, marginTop: 4 }}>{error}</p>}
+    </div>
+  );
+}
+
+const inputStyle = (hasError = false) => ({
+  display: 'block', width: '100%', borderRadius: 8, padding: '8px 12px', fontSize: 13,
+  background: '#0F172A', color: '#F8FAFC',
+  border: `1.5px solid ${hasError ? '#F87171' : '#334155'}`,
+  outline: 'none', transition: 'border-color 0.15s',
+  colorScheme: 'dark',
+});
+
+function TextInput({ name, value, onChange, errors, ...rest }) {
+  return (
+    <input name={name} value={value || ''} onChange={onChange}
+      style={inputStyle(!!errors?.[name])} {...rest}
+      onFocus={e => { e.target.style.borderColor = errors?.[name] ? '#F87171' : '#00D28E'; }}
+      onBlur={e  => { e.target.style.borderColor = errors?.[name] ? '#F87171' : '#334155'; }}
+    />
+  );
+}
+
+// ── Section header ────────────────────────────────────────────────────────────
+function Section({ title, children }) {
+  return (
+    <div>
+      <p style={{ fontSize: 11, fontWeight: 700, color: '#00D28E', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 14 }}>
+        {title}
+      </p>
+      <div className="grid grid-cols-1 gap-y-5 gap-x-4 sm:grid-cols-2">
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function Divider() {
+  return <div style={{ height: 1, background: '#1E293B', margin: '4px 0' }} />;
+}
+
+// ── Main form ─────────────────────────────────────────────────────────────────
 export default function RentalForm({ property, onClose, onSubmit }) {
   const [formData, setFormData] = useState({
     property_name: '',
     address: { street: '', city: '', state: '', zip: '', country: '' },
-    purchase_price: 0,
-    current_market_value: 0,
-    rent: 0,
-    property_management_fees: 0,
-    purchase_date: '',
-    closing_date: '',
+    purchase_price: '', current_market_value: '',
+    rent: '', property_management_fees: '',
+    purchase_date: '', closing_date: '',
     status_occupied: true,
-    
-    pm_name: '',
-    pm_poc: '',
-    pm_email: '',
-    pm_phone: '',
-    pm_escalation: '',
-    
-    mortgage_initial_amount: 0,
-    mortgage_balance: 0,
-    mortgage_pi: 0,
-    mortgage_escrow: 0,
-    mortgage_interest_rate: 0,
-    mortgage_bank: '',
-    mortgage_loan_number: '',
+    pm_name: '', pm_poc: '', pm_email: '', pm_phone: '', pm_escalation: '',
+    mortgage_initial_amount: '', mortgage_balance: '',
+    mortgage_pi: '', mortgage_escrow: '',
+    mortgage_interest_rate: '', mortgage_bank: '', mortgage_loan_number: '',
     mortgage_maturity_date: '',
-    
     lease_tenant_name: '',
-    lease_start_date: '',
-    lease_end_date: '',
-    lease_document_url: ''
+    lease_start_date: '', lease_end_date: '',
+    lease_document_url: '',
   });
+  const [errors, setErrors] = useState({});
 
   useEffect(() => {
     if (property) {
       setFormData(prev => ({
         ...prev,
         ...property,
-        address: property.address || prev.address
+        address: property.address || prev.address,
+        // Normalize null dates to '' for controlled inputs
+        ...Object.fromEntries(DATE_FIELDS.map(f => [f, property[f] || ''])),
       }));
     }
   }, [property]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
+    // Clear field error on change
+    if (errors[name]) setErrors(prev => { const n = { ...prev }; delete n[name]; return n; });
     if (name.startsWith('address.')) {
       const field = name.split('.')[1];
       setFormData(prev => ({ ...prev, address: { ...prev.address, [field]: value } }));
@@ -55,187 +133,172 @@ export default function RentalForm({ property, onClose, onSubmit }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSubmit(formData);
+    const errs = validate(formData);
+    if (Object.keys(errs).length > 0) {
+      setErrors(errs);
+      // Scroll to first error
+      const firstKey = Object.keys(errs)[0];
+      document.getElementById(`rf-${firstKey}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return; // ← STOP — do NOT close or submit
+    }
+    onSubmit(sanitize(formData));
   };
 
+  const modal = { background: '#1E293B', border: '1px solid #334155' };
+  const header = { background: '#0B1120', borderBottom: '1px solid #1E293B' };
+
   return (
-    <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center sticky top-0 bg-white z-10">
-          <h2 className="text-xl font-semibold">{property ? 'Edit Property Details' : 'Add Property'}</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-500">&times;</button>
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, zIndex: 200 }}>
+      <div style={{ ...modal, borderRadius: 18, width: '100%', maxWidth: 860, maxHeight: '92vh', overflowY: 'auto', boxShadow: '0 24px 64px rgba(0,0,0,0.6)' }}>
+
+        {/* Header */}
+        <div style={{ ...header, padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, zIndex: 10, borderRadius: '18px 18px 0 0' }}>
+          <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#F8FAFC' }}>
+            {property ? 'Edit Property' : 'Add Property'}
+          </h2>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748B', fontSize: 22, lineHeight: 1 }} aria-label="Close">×</button>
         </div>
-        
-        <form onSubmit={handleSubmit} className="p-6 space-y-8">
-          
-          {/* General Details */}
-          <div>
-            <h3 className="text-lg font-medium leading-6 text-gray-900 mb-4">General Details</h3>
-            <div className="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-2">
-              <div className="sm:col-span-2">
-                <label className="block text-sm font-medium text-gray-700">Property Name</label>
-                <input required type="text" name="property_name" value={formData.property_name} onChange={handleChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm" />
-              </div>
-              <div className="sm:col-span-2">
-                <label className="block text-sm font-medium text-gray-700">Street</label>
-                <input type="text" name="address.street" value={formData.address.street} onChange={handleChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">City</label>
-                <input type="text" name="address.city" value={formData.address.city} onChange={handleChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">State</label>
-                <input type="text" name="address.state" value={formData.address.state} onChange={handleChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Zipcode</label>
-                <input type="text" name="address.zip" value={formData.address.zip} onChange={handleChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Status</label>
-                <div className="mt-2 flex items-center">
-                  <input type="checkbox" name="status_occupied" checked={formData.status_occupied} onChange={handleChange} className="h-4 w-4 text-primary-600 border-gray-300 rounded" />
-                  <span className="ml-2 text-sm text-gray-700">Occupied</span>
-                </div>
-              </div>
+
+        <form onSubmit={handleSubmit} style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: 24 }} noValidate>
+
+          {/* Validation summary */}
+          {Object.keys(errors).length > 0 && (
+            <div style={{ background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.25)', borderRadius: 10, padding: '12px 16px' }}>
+              <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: '#F87171' }}>Please fix the following before saving:</p>
+              <ul style={{ margin: '6px 0 0 16px', padding: 0, fontSize: 12, color: '#F87171' }}>
+                {Object.values(errors).map((msg, i) => <li key={i}>{msg}</li>)}
+              </ul>
             </div>
-          </div>
+          )}
 
-          <hr />
+          {/* ── General ── */}
+          <Section title="General Details">
+            <FieldWrap label="Property Name *" error={errors.property_name} span2>
+              <TextInput id="rf-property_name" name="property_name" value={formData.property_name} onChange={handleChange} errors={errors} placeholder="e.g. Oak Street Duplex" />
+            </FieldWrap>
+            <FieldWrap label="Street" span2>
+              <TextInput name="address.street" value={formData.address.street} onChange={handleChange} errors={errors} />
+            </FieldWrap>
+            <FieldWrap label="City">
+              <TextInput name="address.city" value={formData.address.city} onChange={handleChange} errors={errors} />
+            </FieldWrap>
+            <FieldWrap label="State">
+              <TextInput name="address.state" value={formData.address.state} onChange={handleChange} errors={errors} />
+            </FieldWrap>
+            <FieldWrap label="Zip Code">
+              <TextInput name="address.zip" value={formData.address.zip} onChange={handleChange} errors={errors} />
+            </FieldWrap>
+            <FieldWrap label="Status">
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', marginTop: 2 }}>
+                <input type="checkbox" name="status_occupied" checked={formData.status_occupied} onChange={handleChange}
+                  style={{ accentColor: '#00D28E', width: 16, height: 16 }} />
+                <span style={{ fontSize: 13, color: '#94A3B8' }}>Occupied</span>
+              </label>
+            </FieldWrap>
+          </Section>
 
-          {/* Initial Financials */}
-          <div>
-            <h3 className="text-lg font-medium leading-6 text-gray-900 mb-4">Initial Acquisition & Valuation</h3>
+          <Divider />
+
+          {/* ── Acquisition ── */}
+          <Section title="Acquisition & Valuation">
             {property && (
-              <div className="bg-blue-50 border border-blue-100 rounded-md p-3 mb-4 text-sm text-blue-800">
-                <strong>Note:</strong> Current Market Value, Rent, and PM Fees are managed via the <strong>Financial History</strong> tab. You can add a new snapshot there to update these values.
+              <div className="sm:col-span-2" style={{ background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 8, padding: '10px 14px', fontSize: 12, color: '#38BDF8' }}>
+                <strong>Note:</strong> Market Value, Rent, and PM Fees are updated via the <strong>Financial History</strong> tab.
               </div>
             )}
-            <div className="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-2">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Purchase Price</label>
-                <input type="number" step="0.01" name="purchase_price" value={formData.purchase_price} onChange={handleChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Current Market Value</label>
-                <input disabled={!!property} type="number" step="0.01" name="current_market_value" value={formData.current_market_value || ''} onChange={handleChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm disabled:bg-gray-100 disabled:text-gray-500" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Purchase Date</label>
-                <input type="date" name="purchase_date" value={formData.purchase_date} onChange={handleChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Closing Date</label>
-                <input type="date" name="closing_date" value={formData.closing_date} onChange={handleChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Current Monthly Rent</label>
-                <input disabled={!!property} type="number" step="0.01" name="rent" value={formData.rent || ''} onChange={handleChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm disabled:bg-gray-100 disabled:text-gray-500" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Property Mgmt Fees (Monthly)</label>
-                <input disabled={!!property} type="number" step="0.01" name="property_management_fees" value={formData.property_management_fees || ''} onChange={handleChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm disabled:bg-gray-100 disabled:text-gray-500" />
-              </div>
-            </div>
-          </div>
+            <FieldWrap label="Purchase Price">
+              <TextInput type="number" step="0.01" min="0" name="purchase_price" value={formData.purchase_price} onChange={handleChange} errors={errors} placeholder="0.00" />
+            </FieldWrap>
+            <FieldWrap label="Current Market Value">
+              <TextInput type="number" step="0.01" min="0" name="current_market_value" value={formData.current_market_value} onChange={handleChange} errors={errors} placeholder="0.00"
+                disabled={!!property} style={{ ...inputStyle(), opacity: property ? 0.5 : 1 }} />
+            </FieldWrap>
+            <FieldWrap label="Purchase Date" error={errors.purchase_date}>
+              <TextInput id="rf-purchase_date" type="date" name="purchase_date" value={formData.purchase_date} onChange={handleChange} errors={errors} />
+            </FieldWrap>
+            <FieldWrap label="Closing Date" error={errors.closing_date}>
+              <TextInput id="rf-closing_date" type="date" name="closing_date" value={formData.closing_date} onChange={handleChange} errors={errors} />
+            </FieldWrap>
+            <FieldWrap label="Monthly Rent">
+              <TextInput type="number" step="0.01" min="0" name="rent" value={formData.rent} onChange={handleChange} errors={errors} placeholder="0.00"
+                disabled={!!property} />
+            </FieldWrap>
+            <FieldWrap label="PM Fees (Monthly)">
+              <TextInput type="number" step="0.01" min="0" name="property_management_fees" value={formData.property_management_fees} onChange={handleChange} errors={errors} placeholder="0.00"
+                disabled={!!property} />
+            </FieldWrap>
+          </Section>
 
-          <hr />
+          <Divider />
 
-          {/* Mortgage */}
-          <div>
-            <h3 className="text-lg font-medium leading-6 text-gray-900 mb-4">Mortgage Details</h3>
-            <div className="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-3">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Original Loan Balance</label>
-                <input type="number" step="0.01" name="mortgage_initial_amount" value={formData.mortgage_initial_amount} onChange={handleChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Current Mortgage Balance</label>
-                <input type="number" step="0.01" name="mortgage_balance" value={formData.mortgage_balance} onChange={handleChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Interest Rate (%)</label>
-                <input type="number" step="0.01" name="mortgage_interest_rate" value={formData.mortgage_interest_rate} onChange={handleChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm" />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700">P&I (Monthly)</label>
-                <input type="number" step="0.01" name="mortgage_pi" value={formData.mortgage_pi} onChange={handleChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Escrow (Monthly)</label>
-                <input type="number" step="0.01" name="mortgage_escrow" value={formData.mortgage_escrow} onChange={handleChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Maturity Date</label>
-                <input type="date" name="mortgage_maturity_date" value={formData.mortgage_maturity_date} onChange={handleChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm" />
-              </div>
+          {/* ── Mortgage ── */}
+          <Section title="Mortgage Details">
+            <FieldWrap label="Original Loan Amount">
+              <TextInput type="number" step="0.01" min="0" name="mortgage_initial_amount" value={formData.mortgage_initial_amount} onChange={handleChange} errors={errors} placeholder="0.00" />
+            </FieldWrap>
+            <FieldWrap label="Current Balance">
+              <TextInput type="number" step="0.01" min="0" name="mortgage_balance" value={formData.mortgage_balance} onChange={handleChange} errors={errors} placeholder="0.00" />
+            </FieldWrap>
+            <FieldWrap label="Interest Rate (%)">
+              <TextInput type="number" step="0.01" min="0" max="100" name="mortgage_interest_rate" value={formData.mortgage_interest_rate} onChange={handleChange} errors={errors} placeholder="e.g. 6.75" />
+            </FieldWrap>
+            <FieldWrap label="P&I (Monthly)">
+              <TextInput type="number" step="0.01" min="0" name="mortgage_pi" value={formData.mortgage_pi} onChange={handleChange} errors={errors} placeholder="0.00" />
+            </FieldWrap>
+            <FieldWrap label="Escrow (Monthly)">
+              <TextInput type="number" step="0.01" min="0" name="mortgage_escrow" value={formData.mortgage_escrow} onChange={handleChange} errors={errors} placeholder="0.00" />
+            </FieldWrap>
+            <FieldWrap label="Maturity Date" error={errors.mortgage_maturity_date}>
+              <TextInput id="rf-mortgage_maturity_date" type="date" name="mortgage_maturity_date" value={formData.mortgage_maturity_date} onChange={handleChange} errors={errors} />
+            </FieldWrap>
+            <FieldWrap label="Bank / Institution">
+              <TextInput name="mortgage_bank" value={formData.mortgage_bank} onChange={handleChange} errors={errors} placeholder="e.g. Chase" />
+            </FieldWrap>
+            <FieldWrap label="Loan Number">
+              <TextInput name="mortgage_loan_number" value={formData.mortgage_loan_number} onChange={handleChange} errors={errors} />
+            </FieldWrap>
+          </Section>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Bank / Institution</label>
-                <input type="text" name="mortgage_bank" value={formData.mortgage_bank} onChange={handleChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm" />
-              </div>
-              <div className="sm:col-span-2">
-                <label className="block text-sm font-medium text-gray-700">Loan Number</label>
-                <input type="text" name="mortgage_loan_number" value={formData.mortgage_loan_number} onChange={handleChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm" />
-              </div>
-            </div>
-          </div>
+          <Divider />
 
-          <hr />
+          {/* ── Lease ── */}
+          <Section title="Lease Agreement">
+            <FieldWrap label="Tenant Name" span2>
+              <TextInput name="lease_tenant_name" value={formData.lease_tenant_name} onChange={handleChange} errors={errors} placeholder="Full name" />
+            </FieldWrap>
+            <FieldWrap label="Lease Start Date" error={errors.lease_start_date}>
+              <TextInput id="rf-lease_start_date" type="date" name="lease_start_date" value={formData.lease_start_date} onChange={handleChange} errors={errors} />
+            </FieldWrap>
+            <FieldWrap label="Lease End Date" error={errors.lease_end_date}>
+              <TextInput id="rf-lease_end_date" type="date" name="lease_end_date" value={formData.lease_end_date} onChange={handleChange} errors={errors} />
+            </FieldWrap>
+            <FieldWrap label="Lease Document URL" span2>
+              <TextInput type="url" name="lease_document_url" value={formData.lease_document_url} onChange={handleChange} errors={errors} placeholder="https://..." />
+            </FieldWrap>
+          </Section>
 
-          {/* Lease Details */}
-          <div>
-            <h3 className="text-lg font-medium leading-6 text-gray-900 mb-4">Lease Agreement</h3>
-            <div className="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-2">
-              <div className="sm:col-span-2">
-                <label className="block text-sm font-medium text-gray-700">Tenant Name</label>
-                <input type="text" name="lease_tenant_name" value={formData.lease_tenant_name} onChange={handleChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Lease Start Date</label>
-                <input type="date" name="lease_start_date" value={formData.lease_start_date} onChange={handleChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Lease End Date</label>
-                <input type="date" name="lease_end_date" value={formData.lease_end_date} onChange={handleChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm" />
-              </div>
-              <div className="sm:col-span-2">
-                <label className="block text-sm font-medium text-gray-700">Lease Document URL</label>
-                <input type="url" name="lease_document_url" value={formData.lease_document_url} onChange={handleChange} placeholder="https://..." className="mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm" />
-              </div>
-            </div>
-          </div>
+          <Divider />
 
-          <hr />
+          {/* ── Property Management ── */}
+          <Section title="Property Management">
+            <FieldWrap label="Company Name" span2>
+              <TextInput name="pm_name" value={formData.pm_name} onChange={handleChange} errors={errors} />
+            </FieldWrap>
+            <FieldWrap label="Point of Contact">
+              <TextInput name="pm_poc" value={formData.pm_poc} onChange={handleChange} errors={errors} />
+            </FieldWrap>
+            <FieldWrap label="Email">
+              <TextInput type="email" name="pm_email" value={formData.pm_email} onChange={handleChange} errors={errors} />
+            </FieldWrap>
+            <FieldWrap label="Phone">
+              <TextInput type="tel" name="pm_phone" value={formData.pm_phone} onChange={handleChange} errors={errors} />
+            </FieldWrap>
+          </Section>
 
-          {/* PM Company */}
-          <div>
-            <h3 className="text-lg font-medium leading-6 text-gray-900 mb-4">Property Management</h3>
-            <div className="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-2">
-              <div className="sm:col-span-2">
-                <label className="block text-sm font-medium text-gray-700">Company Name</label>
-                <input type="text" name="pm_name" value={formData.pm_name} onChange={handleChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">POC Name</label>
-                <input type="text" name="pm_poc" value={formData.pm_poc} onChange={handleChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">POC Email</label>
-                <input type="email" name="pm_email" value={formData.pm_email} onChange={handleChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">POC Phone</label>
-                <input type="text" name="pm_phone" value={formData.pm_phone} onChange={handleChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm" />
-              </div>
-            </div>
-          </div>
-
-          <div className="pt-5 flex justify-end gap-3 sticky bottom-0 bg-white border-t border-gray-200 mt-8 -mx-6 -mb-6 px-6 py-4">
-            <button type="button" onClick={onClose} className="rounded-md border border-gray-300 bg-white py-2 px-4 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none">Cancel</button>
-            <button type="submit" className="btn-primary">Save Property</button>
+          {/* ── Footer ── */}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, paddingTop: 8, borderTop: '1px solid #1E293B', marginTop: 8 }}>
+            <button type="button" onClick={onClose} className="btn-secondary" style={{ minWidth: 96 }}>Cancel</button>
+            <button type="submit" className="btn-primary" style={{ minWidth: 128 }}>Save Property</button>
           </div>
         </form>
       </div>
