@@ -286,39 +286,6 @@ router.patch('/:id/status', async (req, res) => {
 
 // --- LEDGER ROUTES ---
 
-async function syncLedgerToExpenses(userId, ledgerItem, propertyName) {
-  if (ledgerItem.type !== 'Expense') return; // Only mirror expenses
-
-  const expenseData = {
-    user_id: userId,
-    vendor: propertyName ? `${propertyName} - ${ledgerItem.category}` : ledgerItem.category,
-    amount: ledgerItem.amount,
-    date: ledgerItem.date,
-    budget_category: propertyName ? `${propertyName} ${ledgerItem.category}` : ledgerItem.category, // Guess a budget category
-    is_auto_injected: true,
-    source_id: ledgerItem.id,
-    source_type: 'rental_ledger',
-    updated_at: new Date().toISOString()
-  };
-
-  const { data: existing } = await supabase
-    .from('expenses')
-    .select('id')
-    .eq('source_id', ledgerItem.id)
-    .eq('source_type', 'rental_ledger')
-    .maybeSingle();
-
-  if (existing) {
-    await supabase.from('expenses').update(expenseData).eq('id', existing.id);
-  } else {
-    await supabase.from('expenses').insert([expenseData]);
-  }
-}
-
-async function removeLedgerFromExpenses(ledgerId) {
-  await supabase.from('expenses').delete().eq('source_id', ledgerId).eq('source_type', 'rental_ledger');
-}
-
 router.get('/:id/ledger', async (req, res) => {
   try {
     const propertyId = req.params.id;
@@ -341,14 +308,9 @@ router.get('/:id/ledger', async (req, res) => {
 router.post('/:id/ledger', async (req, res) => {
   try {
     const propertyId = req.params.id;
-    const { data: prop } = await supabase.from('rental_properties').select('property_name').eq('id', propertyId).single();
-
     const payload = { ...req.body, rental_property_id: propertyId, user_id: req.userId };
     const { data, error } = await supabase.from('rental_ledger').insert([payload]).select().single();
     if (error) throw error;
-
-    await syncLedgerToExpenses(req.userId, data, prop?.property_name);
-
     res.json(data);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -357,9 +319,6 @@ router.post('/:id/ledger', async (req, res) => {
 
 router.put('/:id/ledger/:ledgerId', async (req, res) => {
   try {
-    const propertyId = req.params.id;
-    const { data: prop } = await supabase.from('rental_properties').select('property_name').eq('id', propertyId).single();
-
     const payload = { ...req.body, updated_at: new Date().toISOString() };
     delete payload.id;
     delete payload.user_id;
@@ -374,9 +333,6 @@ router.put('/:id/ledger/:ledgerId', async (req, res) => {
       .single();
 
     if (error) throw error;
-    
-    await syncLedgerToExpenses(req.userId, data, prop?.property_name);
-
     res.json(data);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -392,9 +348,6 @@ router.delete('/:id/ledger/:ledgerId', async (req, res) => {
       .eq('user_id', req.userId);
 
     if (error) throw error;
-
-    await removeLedgerFromExpenses(req.params.ledgerId);
-
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
