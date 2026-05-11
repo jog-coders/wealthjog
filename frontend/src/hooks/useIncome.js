@@ -4,7 +4,7 @@ import { useAppContext } from '../context/AppContext';
 
 export const useIncome = () => {
   const { get, post, put, del } = useApi();
-  const { session, refreshTrigger } = useAppContext();
+  const { session, refreshTrigger, refreshAll } = useAppContext();
   
   const [income, setIncome] = useState([]);
   const [totals, setTotals] = useState({ biweeklyTotal: 0, monthlyTotal: 0, annualTotal: 0 });
@@ -30,19 +30,19 @@ export const useIncome = () => {
 
   const createIncome = async (payload) => {
     const { error: postError } = await post('/api/income', payload);
-    if (!postError) await fetchIncome();
+    if (!postError) { await fetchIncome(); refreshAll(); }
     return { error: postError };
   };
 
   const updateIncome = async (id, payload) => {
     const { error: putError } = await put(`/api/income/${id}`, payload);
-    if (!putError) await fetchIncome();
+    if (!putError) { await fetchIncome(); refreshAll(); }
     return { error: putError };
   };
 
   const deleteIncome = async (id) => {
     const { error: delError } = await del(`/api/income/${id}`);
-    if (!delError) await fetchIncome();
+    if (!delError) { await fetchIncome(); refreshAll(); }
     return { error: delError };
   };
 

@@ -4,7 +4,7 @@ import { useAppContext } from '../context/AppContext';
 
 export const useBudget = () => {
   const { get, post } = useApi();
-  const { session, refreshTrigger } = useAppContext();
+  const { session, refreshTrigger, refreshAll } = useAppContext();
   
   const [summary, setSummary] = useState({});
   const [lineItems, setLineItems] = useState({ annual: [], fixed_monthly: [], guilt_free: [] });
@@ -43,7 +43,7 @@ export const useBudget = () => {
 
   const saveSection = async (section, items) => {
     const { error: postError } = await post('/api/budget/batch', { section, items });
-    if (!postError) await fetchSummary();
+    if (!postError) { await fetchSummary(); refreshAll(); }
     return { error: postError };
   };
 
