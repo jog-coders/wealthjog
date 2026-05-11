@@ -8,13 +8,96 @@ import { formatCurrency } from '../../utils/formatCurrency';
 import EmptyState from '../../components/EmptyState';
 import { ChevronDownIcon, ChevronRightIcon, PlusIcon } from '@heroicons/react/24/outline';
 
+// ── Focused Update Balance modal ──────────────────────────────────────────
+function UpdateBalanceModal({ item, onClose, onSave }) {
+  const [amount, setAmount]   = useState(0);
+  const [date, setDate]       = useState(new Date().toISOString().split('T')[0]);
+  const [error, setError]     = useState('');
+  const [saving, setSaving]   = useState(false);
+
+  const handleSave = async () => {
+    if (!amount || amount <= 0) {
+      setError('Please enter a valid balance greater than $0.');
+      return;
+    }
+    if (!date) {
+      setError('Please select a date.');
+      return;
+    }
+    setError('');
+    setSaving(true);
+    const { error: saveError } = await onSave({ amount, date });
+    setSaving(false);
+    if (saveError) {
+      setError(typeof saveError === 'string' ? saveError : saveError.message || 'Failed to save. Please try again.');
+    } else {
+      onClose();
+    }
+  };
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 300, padding: 16 }}>
+      <div style={{ background: '#1E293B', border: '1px solid #334155', borderRadius: 16, width: '100%', maxWidth: 400, boxShadow: '0 24px 64px rgba(0,0,0,0.5)' }}>
+        
+        {/* Header */}
+        <div style={{ padding: '16px 20px', borderBottom: '1px solid #334155', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div>
+            <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: '#F8FAFC' }}>Update Balance</p>
+            <p style={{ margin: '3px 0 0', fontSize: 11, color: '#64748B' }}>{item.name} · {item.type || 'Asset'}</p>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748B', fontSize: 20, lineHeight: 1 }}>×</button>
+        </div>
+
+        {/* Current value */}
+        <div style={{ padding: '12px 20px', background: 'rgba(0,210,142,0.06)', borderBottom: '1px solid #0F172A' }}>
+          <p style={{ margin: 0, fontSize: 11, color: '#64748B' }}>Current balance</p>
+          <p style={{ margin: '2px 0 0', fontSize: 20, fontWeight: 800, color: '#00D28E' }}>{formatCurrency(item.amount)}</p>
+        </div>
+
+        {/* Form */}
+        <div style={{ padding: '20px' }}>
+          {error && (
+            <div style={{ background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.25)', borderRadius: 8, padding: '10px 14px', marginBottom: 14, fontSize: 12, color: '#F87171' }}>
+              {error}
+            </div>
+          )}
+
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#94A3B8', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: 6 }}>New Balance *</label>
+            <CurrencyInput value={amount} onChange={setAmount} placeholder="Enter new balance" />
+          </div>
+
+          <div style={{ marginBottom: 20 }}>
+            <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#94A3B8', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: 6 }}>As of Date *</label>
+            <input type="date" value={date} onChange={e => setDate(e.target.value)}
+              style={{ display: 'block', width: '100%', borderRadius: 8, padding: '8px 12px', fontSize: 13, background: '#0F172A', color: '#F8FAFC', border: '1.5px solid #334155', outline: 'none', colorScheme: 'dark', boxSizing: 'border-box' }}
+            />
+          </div>
+
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button onClick={onClose} disabled={saving} style={{ flex: 1, padding: '9px 0', borderRadius: 8, background: 'transparent', border: '1.5px solid #334155', color: '#94A3B8', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
+            <button onClick={handleSave} disabled={saving} style={{ flex: 2, padding: '9px 0', borderRadius: 8, background: saving ? '#00B87D' : '#00D28E', border: 'none', color: '#0F172A', fontSize: 13, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+              {saving ? 'Saving…' : 'Save Balance'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function AssetsTable() {
   const { currentAssets, fullLedger, total, search, setSearch, typeFilter, setTypeFilter, createAsset, updateAsset, deleteAsset } = useAssets();
   const { get } = useApi();
   
+  const [updateBalanceItem, setUpdateBalanceItem] = useState(null);
+
+  const handleUpdateBalance = (item) => {
+    setUpdateBalanceItem(item);
+  };
+
   const [types, setTypes] = useState([]);
   const [isAdding, setIsAdding] = useState(false);
-  const [isUpdatingBalance, setIsUpdatingBalance] = useState(false);
   const [editingId, setEditingId] = useState(null);
   
   const [name, setName] = useState('');
@@ -26,23 +109,10 @@ export default function AssetsTable() {
 
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
-  
   const [expandedRows, setExpandedRows] = useState({});
 
-  const toggleRow = (name) => {
-    setExpandedRows(prev => ({ ...prev, [name]: !prev[name] }));
-  };
-
-  const handleUpdateBalance = (item) => {
-    setName(item.name);
-    setType(item.type);
-    setInstitution(item.institution || '');
-    setDate(new Date().toISOString().split('T')[0]);
-    setAmount(0); // User must enter the new balance
-    setMonthlyFixedSavings(item.monthly_fixed_savings || 0);
-    setEditingId(null); // null = create new ledger entry
-    setIsUpdatingBalance(true);
-    setIsAdding(true);
+  const toggleRow = (id) => {
+    setExpandedRows(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
   useEffect(() => {
@@ -52,20 +122,14 @@ export default function AssetsTable() {
   }, [get]);
 
   const resetForm = () => {
-    setName('');
-    setType('');
-    setInstitution('');
+    setName(''); setType(''); setInstitution('');
     setDate(new Date().toISOString().split('T')[0]);
-    setAmount(0);
-    setMonthlyFixedSavings(0);
-    setIsAdding(false);
-    setIsUpdatingBalance(false);
-    setEditingId(null);
+    setAmount(0); setMonthlyFixedSavings(0);
+    setIsAdding(false); setEditingId(null);
   };
 
   const handleEdit = (item) => {
-    setName(item.name);
-    setType(item.type);
+    setName(item.name); setType(item.type);
     setInstitution(item.institution || '');
     setDate(item.date || new Date().toISOString().split('T')[0]);
     setAmount(item.amount);
@@ -76,19 +140,9 @@ export default function AssetsTable() {
 
   const handleSave = async () => {
     if (!name) return;
-    // Block $0 saves — a balance update must have a positive amount
     if (!editingId && amount <= 0) return;
     if (editingId && amount < 0) return;
-    
-    const payload = { 
-      name, 
-      type, 
-      institution, 
-      date,
-      amount, 
-      monthly_fixed_savings: monthlyFixedSavings > 0 ? monthlyFixedSavings : null 
-    };
-    
+    const payload = { name, type, institution, date, amount, monthly_fixed_savings: monthlyFixedSavings > 0 ? monthlyFixedSavings : null };
     if (editingId) {
       await updateAsset(editingId, payload);
     } else {
@@ -97,17 +151,10 @@ export default function AssetsTable() {
     resetForm();
   };
 
-  const confirmDelete = (id) => {
-    setItemToDelete(id);
-    setDeleteConfirmOpen(true);
-  };
-
+  const confirmDelete = (id) => { setItemToDelete(id); setDeleteConfirmOpen(true); };
   const handleDelete = async () => {
-    if (itemToDelete) {
-      await deleteAsset(itemToDelete);
-    }
-    setDeleteConfirmOpen(false);
-    setItemToDelete(null);
+    if (itemToDelete) await deleteAsset(itemToDelete);
+    setDeleteConfirmOpen(false); setItemToDelete(null);
   };
 
   return (
@@ -286,6 +333,25 @@ export default function AssetsTable() {
         onConfirm={handleDelete}
         onCancel={() => setDeleteConfirmOpen(false)}
       />
+
+      {/* Update Balance modal */}
+      {updateBalanceItem && (
+        <UpdateBalanceModal
+          item={updateBalanceItem}
+          onClose={() => setUpdateBalanceItem(null)}
+          onSave={async ({ amount, date }) => {
+            const result = await createAsset({
+              name:        updateBalanceItem.name,
+              type:        updateBalanceItem.type,
+              institution: updateBalanceItem.institution || '',
+              amount,
+              date,
+              monthly_fixed_savings: updateBalanceItem.monthly_fixed_savings || null,
+            });
+            return result; // { error } or {}
+          }}
+        />
+      )}
     </div>
   );
 }
