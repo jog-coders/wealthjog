@@ -5,7 +5,7 @@ import { getLatestEntries } from '../utils/latestEntries';
 
 export const useLiabilities = () => {
   const { get, post, put, del } = useApi();
-  const { session, refreshTrigger } = useAppContext();
+  const { session, refreshTrigger, refreshAll } = useAppContext();
   
   const [fullLedger, setFullLedger] = useState([]);
   const [currentLiabilities, setCurrentLiabilities] = useState([]);
@@ -52,19 +52,19 @@ export const useLiabilities = () => {
 
   const createLiability = async (payload) => {
     const { error: postError } = await post('/api/liabilities', payload);
-    if (!postError) await fetchLiabilities();
+    if (!postError) { await fetchLiabilities(); refreshAll(); }
     return { error: postError };
   };
 
   const updateLiability = async (id, payload) => {
     const { error: putError } = await put(`/api/liabilities/${id}`, payload);
-    if (!putError) await fetchLiabilities();
+    if (!putError) { await fetchLiabilities(); refreshAll(); }
     return { error: putError };
   };
 
   const deleteLiability = async (id) => {
     const { error: delError } = await del(`/api/liabilities/${id}`);
-    if (!delError) await fetchLiabilities();
+    if (!delError) { await fetchLiabilities(); refreshAll(); }
     return { error: delError };
   };
 

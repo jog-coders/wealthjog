@@ -5,7 +5,7 @@ import { getLatestEntries } from '../utils/latestEntries';
 
 export const useAssets = () => {
   const { get, post, put, del } = useApi();
-  const { session, refreshTrigger } = useAppContext();
+  const { session, refreshTrigger, refreshAll } = useAppContext();
   
   const [fullLedger, setFullLedger] = useState([]);
   const [currentAssets, setCurrentAssets] = useState([]);
@@ -52,19 +52,19 @@ export const useAssets = () => {
 
   const createAsset = async (payload) => {
     const { error: postError } = await post('/api/assets', payload);
-    if (!postError) await fetchAssets();
+    if (!postError) { await fetchAssets(); refreshAll(); }
     return { error: postError };
   };
 
   const updateAsset = async (id, payload) => {
     const { error: putError } = await put(`/api/assets/${id}`, payload);
-    if (!putError) await fetchAssets();
+    if (!putError) { await fetchAssets(); refreshAll(); }
     return { error: putError };
   };
 
   const deleteAsset = async (id) => {
     const { error: delError } = await del(`/api/assets/${id}`);
-    if (!delError) await fetchAssets();
+    if (!delError) { await fetchAssets(); refreshAll(); }
     return { error: delError };
   };
 
