@@ -10,7 +10,8 @@ export default function BulkExpenseForm({ onSuccess }) {
   const fileInputRef = useRef(null);
   
   const today = new Date().toISOString().split('T')[0];
-  const [rows, setRows] = useState([{ id: Date.now(), date: today, vendor: '', category: '', amount: '' }]);
+  const blankRow = () => ({ id: Date.now(), date: today, vendor: '', category: '', suggestedCategory: '', amount: '' });
+  const [rows, setRows] = useState([blankRow()]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Merge and deduplicate categories from annual and guilt_free
@@ -19,7 +20,7 @@ export default function BulkExpenseForm({ onSuccess }) {
   const allCategories = [...new Set([...annualCats, ...guiltFreeCats])].sort((a, b) => a.localeCompare(b));
 
   const addRow = () => {
-    setRows([...rows, { id: Date.now(), date: today, vendor: '', category: '', amount: '' }]);
+    setRows([...rows, blankRow()]);
   };
 
   const removeRow = (id) => {
@@ -31,59 +32,177 @@ export default function BulkExpenseForm({ onSuccess }) {
     setRows(rows.map(r => r.id === id ? { ...r, [field]: value } : r));
   };
 
+  // --- CSV parsing -------------------------------------------------------
+
+  // Lowercase header aliases. Order matters for `preferFirstAlias` lookups:
+  // for `date`, "transaction date" beats "posted date" when both are present.
+  const HEADER_ALIASES = {
+    date: ['transaction date', 'trans date', 'date', 'posted date'],
+    vendor: ['description', 'payee', 'merchant', 'vendor', 'name'],
+    amount: ['debit', 'amount', 'withdrawal'],
+    credit: ['credit', 'deposit'],
+    category: ['category'],
+  };
+
+  // Split a CSV line, honoring "" escaped quotes inside quoted fields.
+  const splitCsvLine = (line) => {
+    const out = [];
+    let cur = '';
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (inQuotes) {
+        if (ch === '"') {
+          if (line[i + 1] === '"') { cur += '"'; i++; }
+          else { inQuotes = false; }
+        } else {
+          cur += ch;
+        }
+      } else if (ch === '"') {
+        inQuotes = true;
+      } else if (ch === ',') {
+        out.push(cur);
+        cur = '';
+      } else {
+        cur += ch;
+      }
+    }
+    out.push(cur);
+    return out.map(v => v.trim());
+  };
+
+  // Find the column index for a field. With preferFirstAlias the aliases are
+  // tried in declaration order; otherwise we scan headers left-to-right.
+  const findColumn = (headers, aliases, { preferFirstAlias = false } = {}) => {
+    if (preferFirstAlias) {
+      for (const alias of aliases) {
+        const idx = headers.indexOf(alias);
+        if (idx !== -1) return idx;
+      }
+      return -1;
+    }
+    for (let i = 0; i < headers.length; i++) {
+      if (aliases.includes(headers[i])) return i;
+    }
+    return -1;
+  };
+
+  // Convert a date string to YYYY-MM-DD. Returns null if unrecognized.
+  // `hint` is 'mdy' (default, US bank statements) or 'dmy'.
+  const parseDate = (raw, hint = 'mdy') => {
+    if (!raw) return null;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw; // ISO already
+    const m = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+    if (m) {
+      let [, a, b, y] = m;
+      if (y.length === 2) y = '20' + y;
+      const pad = (s) => s.padStart(2, '0');
+      return hint === 'dmy' ? `${y}-${pad(b)}-${pad(a)}` : `${y}-${pad(a)}-${pad(b)}`;
+    }
+    return null;
+  };
+
+  // Infer DMY vs MDY from a handful of sample dates: any first-component > 12
+  // proves the file is DMY.
+  const detectDateHint = (samples) => {
+    for (const s of samples) {
+      const m = s && s.match(/^(\d{1,2})\/(\d{1,2})\/\d{2,4}$/);
+      if (m && parseInt(m[1], 10) > 12) return 'dmy';
+    }
+    return 'mdy';
+  };
+
   const parseCSV = (csvText) => {
-    // Basic CSV parser to handle quotes
-    const lines = csvText.split(/\r?\n/).filter(line => line.trim());
-    if (lines.length === 0) return [];
+    const cleaned = csvText.replace(/^﻿/, ''); // strip BOM
+    const lines = cleaned.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    if (lines.length < 2) {
+      return { rows: [], error: 'CSV is empty or has no data rows.' };
+    }
 
-    // Check if first line is header
-    const firstLine = lines[0].toLowerCase();
-    const isHeader = firstLine.includes('posted date') || firstLine.includes('payee');
-    const dataLines = isHeader ? lines.slice(1) : lines;
+    const headerCells = splitCsvLine(lines[0]).map(h => h.toLowerCase());
 
-    const parsedRows = dataLines.map((line, index) => {
-      // Regex to split by comma but ignore commas inside quotes
-      const rowRegex = /(?:^|,)(?:"([^"]*)"|([^,]*))/g;
-      const values = [];
-      let match;
-      while ((match = rowRegex.exec(line)) !== null) {
-        values.push(match[1] !== undefined ? match[1] : match[2]);
+    const dateCol = findColumn(headerCells, HEADER_ALIASES.date, { preferFirstAlias: true });
+    const vendorCol = findColumn(headerCells, HEADER_ALIASES.vendor);
+    const amountCol = findColumn(headerCells, HEADER_ALIASES.amount, { preferFirstAlias: true });
+    const creditCol = findColumn(headerCells, HEADER_ALIASES.credit);
+    const categoryCol = findColumn(headerCells, HEADER_ALIASES.category);
+
+    const missing = [];
+    if (dateCol === -1) missing.push('Date');
+    if (vendorCol === -1) missing.push('Vendor/Description');
+    if (amountCol === -1) missing.push('Amount/Debit');
+    if (missing.length) {
+      return {
+        rows: [],
+        error: `Missing column(s): ${missing.join(', ')}. Found: ${headerCells.join(', ')}`,
+      };
+    }
+
+    // Sample first 5 data rows to choose date format.
+    const sampleDates = lines.slice(1, 6)
+      .map(l => splitCsvLine(l)[dateCol])
+      .filter(Boolean);
+    const dateHint = detectDateHint(sampleDates);
+
+    // Case-insensitive lookup of user's budget categories.
+    const budgetCatIndex = new Map(allCategories.map(c => [c.toLowerCase(), c]));
+
+    let skippedCredits = 0;
+    const rows = [];
+    lines.slice(1).forEach((line, index) => {
+      const cells = splitCsvLine(line);
+
+      const rawDate = cells[dateCol]?.trim();
+      const vendor = cells[vendorCol]?.trim() || '';
+      const rawDebit = cells[amountCol]?.trim();
+      const rawCredit = creditCol !== -1 ? cells[creditCol]?.trim() : '';
+      const rawCategory = categoryCol !== -1 ? cells[categoryCol]?.trim() : '';
+
+      // Skip refunds/payments when Debit and Credit are separate columns.
+      if (creditCol !== -1 && amountCol !== creditCol && !rawDebit && rawCredit) {
+        skippedCredits += 1;
+        return;
       }
-      
-      // Expected format: Posted Date, Reference Number, Payee, Address, Amount
-      if (values.length >= 5) {
-        const rawDate = values[0]?.trim();
-        const vendor = values[2]?.trim();
-        const rawAmount = values[4]?.trim();
 
-        // Convert MM/DD/YYYY to YYYY-MM-DD
-        let formattedDate = today;
-        if (rawDate && /^\d{2}\/\d{2}\/\d{4}$/.test(rawDate)) {
-          const [m, d, y] = rawDate.split('/');
-          formattedDate = `${y}-${m}-${d}`;
-        }
-
-        // Parse amount and take absolute value
-        let amount = 0;
-        if (rawAmount) {
-          const num = parseFloat(rawAmount.replace(/[^0-9.-]+/g, ""));
-          if (!isNaN(num)) {
-            amount = Math.abs(num);
-          }
-        }
-
-        return {
-          id: Date.now() + index,
-          date: formattedDate,
-          vendor: vendor || '',
-          category: '', // Leave category empty for manual selection
-          amount: amount || ''
-        };
+      let amount = 0;
+      if (rawDebit) {
+        const num = parseFloat(rawDebit.replace(/[^0-9.-]+/g, ''));
+        if (!isNaN(num)) amount = Math.abs(num);
       }
-      return null;
-    }).filter(Boolean);
+      if (!amount) return; // skip blank-amount rows
 
-    return parsedRows;
+      const formattedDate = parseDate(rawDate, dateHint) || today;
+
+      let category = '';
+      let suggestedCategory = '';
+      if (rawCategory) {
+        const match = budgetCatIndex.get(rawCategory.toLowerCase());
+        if (match) category = match;
+        else suggestedCategory = rawCategory;
+      }
+
+      rows.push({
+        id: Date.now() + index,
+        date: formattedDate,
+        vendor,
+        category,
+        suggestedCategory,
+        amount,
+      });
+    });
+
+    return {
+      rows,
+      skippedCredits,
+      detected: {
+        date: headerCells[dateCol],
+        vendor: headerCells[vendorCol],
+        amount: headerCells[amountCol],
+        credit: creditCol !== -1 ? headerCells[creditCol] : null,
+        category: categoryCol !== -1 ? headerCells[categoryCol] : null,
+        dateHint,
+      },
+    };
   };
 
   const handleFileUpload = (e) => {
@@ -93,16 +212,23 @@ export default function BulkExpenseForm({ onSuccess }) {
     const reader = new FileReader();
     reader.onload = (event) => {
       const csvText = event.target.result;
-      const newRows = parseCSV(csvText);
-      if (newRows.length > 0) {
-        setRows(newRows);
-        toast.success(`Loaded ${newRows.length} rows from CSV. Please assign categories.`);
+      const result = parseCSV(csvText);
+
+      if (result.error) {
+        toast.error(result.error, { duration: 6000 });
+      } else if (result.rows.length === 0) {
+        toast.error('No importable rows found in this file.');
       } else {
-        toast.error('Could not parse any rows from the file.');
+        setRows(result.rows);
+        const { date, vendor, amount } = result.detected;
+        const detail = `Detected: Date="${date}", Vendor="${vendor}", Amount="${amount}"`;
+        const skipped = result.skippedCredits
+          ? ` Skipped ${result.skippedCredits} credit/refund row(s).`
+          : '';
+        toast.success(`Loaded ${result.rows.length} rows.${skipped} ${detail}`, { duration: 6000 });
       }
     };
     reader.readAsText(file);
-    // Reset file input
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -143,7 +269,7 @@ export default function BulkExpenseForm({ onSuccess }) {
       toast.error('Failed to save expenses: ' + error.message);
     } else {
       toast.success(`Successfully saved ${validRows.length} expenses.`);
-      setRows([{ id: Date.now(), date: today, vendor: '', category: '', amount: '' }]);
+      setRows([blankRow()]);
       if (onSuccess) onSuccess();
     }
   };
@@ -207,12 +333,15 @@ export default function BulkExpenseForm({ onSuccess }) {
                   />
                 </td>
                 <td className="whitespace-nowrap px-3 py-2">
-                  <select 
-                    value={row.category} 
-                    onChange={e => updateRow(row.id, 'category', e.target.value)} 
+                  <select
+                    value={row.category}
+                    onChange={e => updateRow(row.id, 'category', e.target.value)}
+                    title={row.suggestedCategory ? `Bank suggested: ${row.suggestedCategory}` : undefined}
                     className={`block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-primary-600 sm:text-sm sm:leading-6 px-2 bg-white ${!row.category ? 'text-gray-500' : ''}`}
                   >
-                    <option value="">Select...</option>
+                    <option value="">
+                      {row.suggestedCategory ? `Select... (bank: ${row.suggestedCategory})` : 'Select...'}
+                    </option>
                     {allCategories.map(cat => (
                       <option key={cat} value={cat}>{cat}</option>
                     ))}

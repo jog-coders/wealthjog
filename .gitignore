@@ -4,3 +4,8 @@ dist/
 .DS_Store
 *.log
 .vercel/
+
+# Personal bank/transaction exports — never commit
+*transaction_download*.csv
+*transactions*.csv
+*statement*.csv
