@@ -2,10 +2,11 @@ import { useState } from 'react';
 import { ArrowLeftIcon, PencilIcon } from '@heroicons/react/24/outline';
 import RentalLedger from './RentalLedger';
 import RentalHistoryLedger from './RentalHistoryLedger';
+import RentalCharts from './RentalCharts';
 import { formatCurrency } from '../../utils/formatCurrency';
 
 export default function RentalDashboard({ property, onBack, onEdit }) {
-  const [activeTab, setActiveTab] = useState('transactions');
+  const [activeTab, setActiveTab] = useState('insights');
 
   const mortAmt = (Number(property.mortgage_pi) || 0) + (Number(property.mortgage_escrow) || 0);
   const pmFees = Number(property.property_management_fees) || 0;
@@ -73,6 +74,12 @@ export default function RentalDashboard({ property, onBack, onEdit }) {
           <div className="bg-white border-b border-gray-200 px-4 pt-2 rounded-t-xl">
             <nav className="-mb-px flex space-x-8">
               <button 
+                onClick={() => setActiveTab('insights')} 
+                className={`${activeTab === 'insights' ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm transition-colors`}
+              >
+                📊 Insights
+              </button>
+              <button 
                 onClick={() => setActiveTab('transactions')} 
                 className={`${activeTab === 'transactions' ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm transition-colors`}
               >
@@ -88,7 +95,9 @@ export default function RentalDashboard({ property, onBack, onEdit }) {
           </div>
           
           <div className="p-0">
-            {activeTab === 'transactions' ? <RentalLedger propertyId={property.id} /> : <RentalHistoryLedger propertyId={property.id} />}
+            {activeTab === 'insights'      && <div className="pt-4"><RentalCharts property={property} /></div>}
+            {activeTab === 'transactions'  && <RentalLedger propertyId={property.id} />}
+            {activeTab === 'history'       && <RentalHistoryLedger propertyId={property.id} />}
           </div>
         </div>
         
