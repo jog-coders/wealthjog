@@ -5,67 +5,64 @@ import { Treemap, ResponsiveContainer, Tooltip } from 'recharts';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { PALETTE } from '../../utils/categoryColors';
 
-// ── Named color map — covers all common asset type names & variations ─────────
-const TYPE_COLORS = {
-  // Real estate
+// ── Extended 24-colour palette — all visually distinct ────────────────────────
+const EXTENDED_PALETTE = [
+  '#00D28E', '#38BDF8', '#E879F9', '#FB923C', '#FBBF24',
+  '#60A5FA', '#34D399', '#F472B6', '#A3E635', '#F87171',
+  '#2DD4BF', '#818CF8', '#22D3EE', '#C084FC', '#FCD34D',
+  '#4ADE80', '#FB7185', '#86EFAC', '#93C5FD', '#FDE68A',
+  '#6EE7B7', '#A78BFA', '#FCA5A5', '#BAE6FD',
+];
+
+// Soft colour preferences per type name — used only when the colour hasn't been taken yet.
+const TYPE_PREFS = {
   'Real Estate':          '#00D28E',
   'Property':             '#00D28E',
   'Home':                 '#00D28E',
-  // Investments
   'Investment':           '#38BDF8',
   'Investment Brokerage': '#60A5FA',
   'Brokerage':            '#60A5FA',
   'Stock':                '#38BDF8',
   'Stocks':               '#38BDF8',
-  // Savings
   'Savings':              '#FBBF24',
   'Savings Account':      '#FBBF24',
-  'High Yield Savings':   '#F59E0B',
-  // Retirement
+  'High Yield Savings':   '#FCD34D',
   'Retirement':           '#E879F9',
-  'IRA':                  '#E879F9',
-  '401k':                 '#D946EF',
-  '401(k)':               '#D946EF',
-  'Roth IRA':             '#C026D3',
-  // Checking / Cash
+  'IRA':                  '#C084FC',
+  '401k':                 '#818CF8',
+  '401(k)':               '#818CF8',
+  'Roth IRA':             '#A78BFA',
   'Checkings':            '#34D399',
   'Checking':             '#34D399',
   'Checking Account':     '#34D399',
   'Cash':                 '#A3E635',
-  'Money Market':         '#84CC16',
-  // Vehicle
+  'Money Market':         '#4ADE80',
   'Vehicle':              '#FB923C',
   'Car':                  '#FB923C',
   'Auto':                 '#FB923C',
-  // Crypto
-  'Crypto':               '#818CF8',
-  'Cryptocurrency':       '#818CF8',
-  'Bitcoin':              '#6366F1',
-  // Other
+  'Crypto':               '#F472B6',
+  'Cryptocurrency':       '#F472B6',
+  'Bitcoin':              '#F472B6',
   'Other':                '#2DD4BF',
   'Misc':                 '#2DD4BF',
 };
 
-// ── Collision-free color assignment ──────────────────────────────────────────
-// Pass 1: assign named colors. Pass 2: unknowns get the next unused palette slot.
+// ── Single-pass collision-free colour assignment ───────────────────────────────
+// Each type gets its preferred colour IF unclaimed; otherwise the next unused
+// slot from EXTENDED_PALETTE. Guarantees every type gets a UNIQUE colour.
 function buildTypeColorMap(typeSet) {
-  const assigned  = {};
+  const assigned   = {};
   const usedColors = new Set();
-
-  // Pass 1 — named types
-  typeSet.forEach(type => {
-    if (TYPE_COLORS[type]) {
-      assigned[type] = TYPE_COLORS[type];
-      usedColors.add(TYPE_COLORS[type]);
-    }
-  });
-
-  // Pass 2 — unknown types get next unused palette color
   let pi = 0;
+
   typeSet.forEach(type => {
-    if (!assigned[type]) {
-      while (pi < PALETTE.length && usedColors.has(PALETTE[pi])) pi++;
-      const color = PALETTE[pi % PALETTE.length];
+    const preferred = TYPE_PREFS[type];
+    if (preferred && !usedColors.has(preferred)) {
+      assigned[type] = preferred;
+      usedColors.add(preferred);
+    } else {
+      while (pi < EXTENDED_PALETTE.length && usedColors.has(EXTENDED_PALETTE[pi])) pi++;
+      const color = EXTENDED_PALETTE[pi % EXTENDED_PALETTE.length];
       assigned[type] = color;
       usedColors.add(color);
       pi++;
@@ -281,36 +278,64 @@ export default function AssetsLiabilitiesVisuals() {
         )}
       </div>
 
-      {/* ── Liability ratio bar ── */}
-      {totalAssets > 0 && (
-        <div style={{ background: '#1E293B', borderRadius: 12, padding: '14px 18px', border: '1px solid #334155' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-            <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: '#94A3B8' }}>Liability-to-Asset Ratio</p>
-            <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: liabilityRatio > 40 ? '#F87171' : liabilityRatio > 20 ? '#FB923C' : '#00D28E' }}>
-              {liabilityRatio.toFixed(1)}%
-              <span style={{ fontSize: 10, fontWeight: 400, color: '#64748B', marginLeft: 6 }}>
-                {liabilityRatio < 15 ? '✓ Healthy' : liabilityRatio < 35 ? '⚠ Moderate' : '✗ High'}
+      {/* ── Liability-to-Asset Ratio — dual segment bar ── */}
+      {totalAssets > 0 && (() => {
+        const assetPct = Math.min(100, 100 - liabilityRatio);
+        const liabPct  = Math.min(100, liabilityRatio);
+        const health   = liabilityRatio < 15 ? { label: '✓ Healthy',   color: '#00D28E', bg: 'rgba(0,210,142,0.10)'   }
+                       : liabilityRatio < 35 ? { label: '⚠ Moderate',  color: '#FBBF24', bg: 'rgba(251,191,36,0.10)'  }
+                       :                       { label: '✗ High Debt',  color: '#F87171', bg: 'rgba(248,113,113,0.10)' };
+        return (
+          <div style={{ background: '#1E293B', borderRadius: 14, padding: '18px 20px', border: '1px solid #334155' }}>
+            {/* Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+              <p style={{ margin: 0, fontSize: 11, fontWeight: 700, color: '#94A3B8', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Liability-to-Asset Ratio</p>
+              <span style={{ fontSize: 11, fontWeight: 700, color: health.color, background: health.bg, borderRadius: 99, padding: '3px 11px', border: `1px solid ${health.color}33` }}>
+                {health.label}
               </span>
-            </p>
+            </div>
+
+            {/* Split bar */}
+            <div style={{ display: 'flex', height: 18, borderRadius: 9, overflow: 'hidden', gap: 2 }}>
+              {/* Asset segment */}
+              <div style={{
+                flex: assetPct, minWidth: liabPct < 100 ? 4 : 0,
+                background: 'linear-gradient(90deg,#00B87D,#00D28E,#34D399)',
+                transition: 'flex 0.9s cubic-bezier(0.4,0,0.2,1)',
+                boxShadow: '0 0 10px rgba(0,210,142,0.3)',
+              }} />
+              {/* Liability segment */}
+              {liabPct > 0 && (
+                <div style={{
+                  flex: liabPct, minWidth: assetPct < 100 ? 4 : 0,
+                  background: liabilityRatio > 40
+                    ? 'linear-gradient(90deg,#EF4444,#F87171)'
+                    : liabilityRatio > 20
+                    ? 'linear-gradient(90deg,#FB923C,#FBBF24)'
+                    : 'linear-gradient(90deg,#FBBF24,#FDE68A)',
+                  transition: 'flex 0.9s cubic-bezier(0.4,0,0.2,1)',
+                }} />
+              )}
+            </div>
+
+            {/* Labels row */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 10, gap: 8, flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                <div style={{ width: 10, height: 10, borderRadius: 3, background: 'linear-gradient(135deg,#00D28E,#34D399)', flexShrink: 0 }} />
+                <span style={{ fontSize: 11, color: '#64748B' }}>Assets</span>
+                <span style={{ fontSize: 13, fontWeight: 800, color: '#00D28E', letterSpacing: '-0.01em' }}>{formatCurrency(totalAssets)}</span>
+                <span style={{ fontSize: 10, color: '#475569' }}>({assetPct.toFixed(1)}%)</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                <div style={{ width: 10, height: 10, borderRadius: 3, background: liabilityRatio > 40 ? 'linear-gradient(135deg,#EF4444,#F87171)' : liabilityRatio > 20 ? 'linear-gradient(135deg,#FB923C,#FBBF24)' : 'linear-gradient(135deg,#FBBF24,#FDE68A)', flexShrink: 0 }} />
+                <span style={{ fontSize: 11, color: '#64748B' }}>Liabilities</span>
+                <span style={{ fontSize: 13, fontWeight: 800, color: liabilityRatio > 35 ? '#F87171' : liabilityRatio > 20 ? '#FB923C' : '#FBBF24', letterSpacing: '-0.01em' }}>{formatCurrency(totalLiabilities)}</span>
+                <span style={{ fontSize: 10, color: '#475569' }}>({liabPct.toFixed(1)}%)</span>
+              </div>
+            </div>
           </div>
-          <div style={{ height: 7, background: '#0F172A', borderRadius: 4, overflow: 'hidden' }}>
-            <div style={{
-              height: '100%', width: `${liabilityRatio}%`, borderRadius: 4,
-              background: liabilityRatio > 40
-                ? 'linear-gradient(90deg,#F87171,#EF4444)'
-                : liabilityRatio > 20
-                ? 'linear-gradient(90deg,#FBBF24,#FB923C)'
-                : 'linear-gradient(90deg,#00D28E,#34D399)',
-              boxShadow: liabilityRatio < 20 ? '0 0 8px rgba(0,210,142,0.35)' : 'none',
-              transition: 'width 0.8s ease',
-            }} />
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 5 }}>
-            <span style={{ fontSize: 10, color: '#64748B' }}>Assets {formatCurrency(totalAssets)}</span>
-            <span style={{ fontSize: 10, color: '#64748B' }}>Liabilities {formatCurrency(totalLiabilities)}</span>
-          </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }

@@ -8,8 +8,9 @@ const router = express.Router();
 router.get('/enum-values', async (req, res) => {
   try {
     const { domain } = req.query;
-    if (!domain || (domain !== 'asset_type' && domain !== 'liability_type')) {
-      return res.status(400).json({ error: 'Valid domain is required' });
+    const validDomains = ['asset_type', 'liability_type', 'institution'];
+    if (!domain || !validDomains.includes(domain)) {
+      return res.status(400).json({ error: 'Valid domain is required (asset_type, liability_type, institution)' });
     }
 
     const { data, error } = await supabase
@@ -28,7 +29,7 @@ router.get('/enum-values', async (req, res) => {
 
 router.post('/enum-values',
   [
-    body('domain').isIn(['asset_type', 'liability_type']),
+    body('domain').isIn(['asset_type', 'liability_type', 'institution']),
     body('label').notEmpty()
   ],
   validate,
@@ -64,19 +65,27 @@ router.delete('/enum-values/:id', async (req, res) => {
       return res.status(404).json({ error: 'Not found' });
     }
 
-    // Check if in use
-    const tableToCheck = enumValue.domain === 'asset_type' ? 'assets' : 'liabilities';
-    const { data: inUseData, error: useError } = await supabase
-      .from(tableToCheck)
-      .select('id')
-      .eq('user_id', req.userId)
-      .eq('type', enumValue.label)
-      .limit(1);
-
-    if (useError) throw useError;
-
-    if (inUseData && inUseData.length > 0) {
-      return res.status(400).json({ error: 'Type is in use and cannot be deleted.' });
+    // Check if in use (institution checks both tables)
+    if (enumValue.domain === 'institution') {
+      const [{ data: assetsUsing }, { data: liabsUsing }] = await Promise.all([
+        supabase.from('assets').select('id').eq('user_id', req.userId).eq('institution', enumValue.label).limit(1),
+        supabase.from('liabilities').select('id').eq('user_id', req.userId).eq('institution', enumValue.label).limit(1),
+      ]);
+      if ((assetsUsing?.length > 0) || (liabsUsing?.length > 0)) {
+        return res.status(400).json({ error: 'Institution is in use and cannot be deleted.' });
+      }
+    } else {
+      const tableToCheck = enumValue.domain === 'asset_type' ? 'assets' : 'liabilities';
+      const { data: inUseData, error: useError } = await supabase
+        .from(tableToCheck)
+        .select('id')
+        .eq('user_id', req.userId)
+        .eq('type', enumValue.label)
+        .limit(1);
+      if (useError) throw useError;
+      if (inUseData && inUseData.length > 0) {
+        return res.status(400).json({ error: 'Type is in use and cannot be deleted.' });
+      }
     }
 
     const { error: delError } = await supabase

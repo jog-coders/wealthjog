@@ -86,8 +86,40 @@ async function upsertIntegrations(userId, property, snapshotDate = null) {
     await supabase.from('income').delete().eq('source_id', property.id).eq('source_type', 'rental_property');
   }
 
-  // Clean up any previously auto-injected budget entries (mortgage/PM fees no longer auto-injected)
-  await supabase.from('budget_line_items').delete().eq('source_id', property.id).eq('user_id', userId);
+  // 4. BUDGET — mortgage payment (P&I + escrow) as a Fixed Monthly Cost
+  const mortgageMonthly = (Number(property.mortgage_pi) || 0) + (Number(property.mortgage_escrow) || 0);
+  if (mortgageMonthly > 0) {
+    const { data: budgetCheck } = await supabase
+      .from('budget_line_items')
+      .select('id')
+      .eq('source_id', property.id)
+      .eq('source_type', 'rental_property')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    const budgetData = {
+      user_id: userId,
+      section: 'fixed_monthly',
+      category: `${property.property_name} — Mortgage`,
+      amount: mortgageMonthly,
+      is_auto_injected: true,
+      source_id: property.id,
+      source_type: 'rental_property',
+    };
+
+    if (budgetCheck) {
+      await supabase.from('budget_line_items').update(budgetData).eq('id', budgetCheck.id);
+    } else {
+      await supabase.from('budget_line_items').insert([budgetData]);
+    }
+  } else {
+    // No mortgage — remove any existing budget entry for this property
+    await supabase.from('budget_line_items')
+      .delete()
+      .eq('source_id', property.id)
+      .eq('source_type', 'rental_property')
+      .eq('user_id', userId);
+  }
 
   await maybeSnapshot(userId);
 }

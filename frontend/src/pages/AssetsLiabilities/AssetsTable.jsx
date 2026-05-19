@@ -97,6 +97,7 @@ export default function AssetsTable() {
   };
 
   const [types, setTypes] = useState([]);
+  const [institutions, setInstitutions] = useState([]);
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState(null);
   
@@ -118,6 +119,9 @@ export default function AssetsTable() {
   useEffect(() => {
     get('/api/settings/enum-values?domain=asset_type').then(({ data }) => {
       if (data) setTypes(data);
+    });
+    get('/api/settings/enum-values?domain=institution').then(({ data }) => {
+      if (data) setInstitutions(data);
     });
   }, [get]);
 
@@ -207,7 +211,26 @@ export default function AssetsTable() {
             </div>
             <div className="sm:col-span-2">
               <label className="block text-sm font-medium text-gray-600">Institution</label>
-              <input type="text" value={institution} onChange={e => setInstitution(e.target.value)} className="mt-1 block w-full rounded-lg border-gray-200 focus:border-primary-500 focus:ring-primary-500 sm:text-sm px-3 py-2 border" />
+              {institutions.length > 0 ? (
+                <select
+                  value={institutions.some(i => i.label === institution) ? institution : institution ? '__custom__' : ''}
+                  onChange={e => setInstitution(e.target.value === '__custom__' ? '' : e.target.value)}
+                  className="mt-1 block w-full rounded-lg border-gray-200 focus:border-primary-500 focus:ring-primary-500 sm:text-sm px-3 py-2 border bg-white"
+                >
+                  <option value="">Select institution</option>
+                  {institutions.map(i => <option key={i.id} value={i.label}>{i.label}</option>)}
+                  <option value="__custom__">Other (type manually)</option>
+                </select>
+              ) : null}
+              {(institutions.length === 0 || !institutions.some(i => i.label === institution) && institution !== '') ? (
+                <input
+                  type="text"
+                  value={institution}
+                  onChange={e => setInstitution(e.target.value)}
+                  placeholder={institutions.length > 0 ? 'Enter custom institution…' : 'Institution name'}
+                  className="mt-1 block w-full rounded-lg border-gray-200 focus:border-primary-500 focus:ring-primary-500 sm:text-sm px-3 py-2 border"
+                />
+              ) : null}
             </div>
             <div className="sm:col-span-2">
               <label className="block text-sm font-medium text-gray-600">Date *</label>

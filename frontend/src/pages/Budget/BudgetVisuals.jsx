@@ -155,11 +155,11 @@ export default function BudgetVisuals({ currentStep }) {
   const pieTotal    = pieData.reduce((s, d) => s + d.value, 0);
 
   const cardStyle = {
-    background: '#1E293B',
+    background: 'linear-gradient(145deg, #1E293B 0%, #162032 100%)',
     border: '1px solid #334155',
-    borderRadius: 16,
+    borderRadius: 18,
     padding: '20px 22px',
-    boxShadow: '0 4px 24px rgba(0,0,0,0.35)',
+    boxShadow: '0 8px 32px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.04)',
   };
 
   return (
@@ -167,34 +167,40 @@ export default function BudgetVisuals({ currentStep }) {
 
       {/* ── Gradient Bar Chart ── */}
       <div style={cardStyle}>
-        <p style={{ margin: '0 0 4px', fontSize: 13, fontWeight: 700, color: '#F8FAFC' }}>{titleBar}</p>
-        <p style={{ margin: '0 0 16px', fontSize: 10, color: '#64748B' }}>Monthly breakdown with gradient fills</p>
+        <p style={{ margin: '0 0 2px', fontSize: 13, fontWeight: 700, color: '#F8FAFC' }}>{titleBar}</p>
+        <p style={{ margin: '0 0 18px', fontSize: 10, color: '#475569', letterSpacing: '0.04em' }}>Monthly breakdown · hover for details</p>
         <div style={{ height: 300 }}>
           {barData.length === 0 ? (
             <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#475569', fontSize: 13 }}>No data available</div>
           ) : (
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={barData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }} barCategoryGap="30%">
-                {/* ── Gradient definitions ── */}
+              <BarChart data={barData} margin={{ top: 12, right: 8, left: 0, bottom: 0 }} barCategoryGap="35%">
                 <defs>
                   {barGrads.map(({ id, color }) => (
                     <linearGradient key={id} id={id} x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%"   stopColor={color} stopOpacity={1}   />
-                      <stop offset="100%" stopColor={color} stopOpacity={0.45}/>
+                      <stop offset="0%"   stopColor={color} stopOpacity={0.95} />
+                      <stop offset="60%"  stopColor={color} stopOpacity={0.65} />
+                      <stop offset="100%" stopColor={color} stopOpacity={0.25} />
                     </linearGradient>
                   ))}
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(51,65,85,0.4)" vertical={false} />
+                <CartesianGrid strokeDasharray="2 4" stroke="rgba(51,65,85,0.35)" vertical={false} />
                 <XAxis dataKey="name" tick={{ fill: '#64748B', fontSize: 10 }} axisLine={false} tickLine={false} />
-                <YAxis tickFormatter={(v) => `$${(v/1000).toFixed(0)}k`} tick={{ fill: '#64748B', fontSize: 10 }} axisLine={false} tickLine={false} width={48} />
-                <Tooltip content={<DarkTooltip />} />
-                <Legend wrapperStyle={{ fontSize: 11, color: '#94A3B8', paddingTop: 8 }} />
-                {barGrads.map(({ key, id }) => (
-                  <Bar key={key} dataKey={key} stackId={stackedBar ? 'a' : undefined}
-                    fill={`url(#${id})`} radius={stackedBar ? [0,0,0,0] : [6,6,0,0]}
-                    stroke="none"
-                  />
-                ))}
+                <YAxis tickFormatter={(v) => `$${(v/1000).toFixed(0)}k`} tick={{ fill: '#64748B', fontSize: 10 }} axisLine={false} tickLine={false} width={46} />
+                <Tooltip content={<DarkTooltip />} cursor={{ fill: 'rgba(255,255,255,0.03)', radius: 6 }} />
+                <Legend wrapperStyle={{ fontSize: 11, color: '#94A3B8', paddingTop: 10 }} iconType="circle" iconSize={7} />
+                {barGrads.map(({ key, id }, idx) => {
+                  const isTop = stackedBar ? idx === barGrads.length - 1 : true;
+                  return (
+                    <Bar key={key} dataKey={key} stackId={stackedBar ? 'a' : undefined}
+                      fill={`url(#${id})`}
+                      radius={isTop ? [7, 7, 0, 0] : [0, 0, 0, 0]}
+                      stroke="none"
+                      animationDuration={700}
+                      animationEasing="ease-out"
+                    />
+                  );
+                })}
               </BarChart>
             </ResponsiveContainer>
           )}
