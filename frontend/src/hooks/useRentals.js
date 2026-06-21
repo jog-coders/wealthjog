@@ -1,25 +1,26 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useApi } from './useApi';
 import { useAppContext } from '../context/AppContext';
 
 export const useRentals = () => {
   const { get, post, put, patch, del } = useApi();
-  const { session, refreshTrigger } = useAppContext();
+  const { session } = useAppContext();
+  const userId = session?.user?.id ?? null;
   
   const [rentals, setRentals] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const fetchRentals = useCallback(async () => {
-    if (!session) return;
+    if (!userId) return;
     setLoading(true);
     const { data } = await get('/api/rentals');
     if (data) setRentals(data);
     setLoading(false);
-  }, [session, get]);
+  }, [userId, get]);
 
   useEffect(() => {
     fetchRentals();
-  }, [fetchRentals, refreshTrigger]);
+  }, [fetchRentals]);
 
   const createRental = async (payload) => {
     const { data, error } = await post('/api/rentals', payload);
@@ -51,17 +52,24 @@ export const useRentals = () => {
 export const useRentalLedger = (rentalId) => {
   const { get, post, put, del } = useApi();
   const { session } = useAppContext();
+  const userId = session?.user?.id ?? null;
   
   const [ledger, setLedger] = useState([]);
   const [loading, setLoading] = useState(true);
+  // Track whether we've ever loaded so background refetches don't show the spinner
+  const hasLoaded = useRef(false);
 
   const fetchLedger = useCallback(async () => {
     if (!session || !rentalId) return;
-    setLoading(true);
+    // Only show the loading spinner on the very first load; subsequent calls refresh silently
+    if (!hasLoaded.current) setLoading(true);
     const { data } = await get(`/api/rentals/${rentalId}/ledger`);
-    if (data) setLedger(data);
+    if (data) {
+      setLedger(data);
+      hasLoaded.current = true;
+    }
     setLoading(false);
-  }, [session, rentalId, get]);
+  }, [userId, rentalId, get]);
 
   useEffect(() => {
     fetchLedger();
@@ -91,17 +99,22 @@ export const useRentalLedger = (rentalId) => {
 export const useRentalHistory = (rentalId) => {
   const { get, post, put, del } = useApi();
   const { session } = useAppContext();
+  const userId = session?.user?.id ?? null;
   
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
+  const hasLoaded = useRef(false);
 
   const fetchHistory = useCallback(async () => {
     if (!session || !rentalId) return;
-    setLoading(true);
+    if (!hasLoaded.current) setLoading(true);
     const { data } = await get(`/api/rentals/${rentalId}/history`);
-    if (data) setHistory(data);
+    if (data) {
+      setHistory(data);
+      hasLoaded.current = true;
+    }
     setLoading(false);
-  }, [session, rentalId, get]);
+  }, [userId, rentalId, get]);
 
   useEffect(() => {
     fetchHistory();

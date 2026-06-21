@@ -1,12 +1,12 @@
 import { useDashboard } from '../../hooks/useDashboard';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, defs, linearGradient, stop } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { formatCurrency } from '../../utils/formatCurrency';
 
 function DarkTooltip({ active, payload, label }) {
   if (active && payload && payload.length) {
     return (
-      <div style={{ background: '#1E293B', border: '1px solid #334155', borderRadius: 10, padding: '8px 14px', boxShadow: '0 8px 24px rgba(0,0,0,0.5)' }}>
-        <p style={{ margin: 0, fontSize: 11, color: '#64748B' }}>{label}</p>
+      <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, padding: '8px 14px', boxShadow: '0 8px 24px rgba(0,0,0,0.5)' }}>
+        <p style={{ margin: 0, fontSize: 11, color: 'var(--text-3)' }}>{label}</p>
         <p style={{ margin: '3px 0 0', fontSize: 14, fontWeight: 700, color: '#00D28E' }}>{formatCurrency(payload[0].value)}</p>
       </div>
     );
@@ -23,18 +23,18 @@ export default function NetWorthHistory() {
   }));
 
   const cardStyle = {
-    background: '#1E293B', border: '1px solid #334155', borderRadius: 16,
+    background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16,
     padding: '20px 24px',
     boxShadow: '0 0 24px rgba(0,210,142,0.06)',
   };
 
   return (
     <div style={cardStyle}>
-      <h3 style={{ margin: '0 0 16px', fontSize: 15, fontWeight: 700, color: '#F8FAFC' }}>Net Worth Trend</h3>
+      <h3 style={{ margin: '0 0 16px', fontSize: 15, fontWeight: 700, color: 'var(--text-1)' }}>Net Worth Trend</h3>
 
       <div style={{ height: 260, position: 'relative' }}>
         {formattedData.length === 0 ? (
-          <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, color: '#64748B', fontSize: 13, textAlign: 'center' }}>
+          <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, color: 'var(--text-3)', fontSize: 13, textAlign: 'center' }}>
             <p style={{ margin: 0 }}>No historical data yet.</p>
             <p style={{ margin: 0, fontSize: 11 }}>A snapshot is taken when you update assets or liabilities.</p>
           </div>
@@ -49,8 +49,8 @@ export default function NetWorthHistory() {
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(51,65,85,0.5)" />
-              <XAxis dataKey="date" tick={{ fill: '#64748B', fontSize: 10 }} axisLine={false} tickLine={false} />
-              <YAxis tickFormatter={(v) => `$${(v/1000).toFixed(0)}k`} tick={{ fill: '#64748B', fontSize: 10 }} axisLine={false} tickLine={false} width={52} />
+              <XAxis dataKey="date" tick={{ fill: 'var(--text-3)', fontSize: 10 }} axisLine={false} tickLine={false} />
+              <YAxis tickFormatter={(v) => `$${(v/1000).toFixed(0)}k`} tick={{ fill: 'var(--text-3)', fontSize: 10 }} axisLine={false} tickLine={false} width={52} />
               <Tooltip content={<DarkTooltip />} />
               <Area type="monotone" dataKey="netWorth" stroke="#00D28E" strokeWidth={2.5}
                 fill="url(#greenGradient)" dot={{ r: 3, fill: '#00D28E', stroke: '#0F172A', strokeWidth: 2 }}

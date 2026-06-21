@@ -28,17 +28,29 @@ export const useApi = () => {
       }
 
       const response = await fetch(`${BASE_URL}${path}`, options);
-      
+
       if (response.status === 401) {
         await supabase.auth.signOut();
         window.location.href = '/login';
         return { data: null, error: 'Session expired' };
       }
 
-      const data = await response.json();
+      // Only parse as JSON when the server actually sends JSON.
+      // HTML error pages (404/500 from Express or a proxy) would otherwise
+      // throw "Unexpected token '<'" here.
+      const contentType = response.headers.get('content-type') || '';
+      let data = null;
+      if (contentType.includes('application/json')) {
+        data = await response.json();
+      } else if (!response.ok) {
+        const text = await response.text();
+        const errorMsg = `Server error ${response.status}: ${text.slice(0, 120)}`;
+        toast.error(errorMsg);
+        return { data: null, error: errorMsg };
+      }
 
       if (!response.ok) {
-        const errorMsg = data.error || data.errors?.[0]?.msg || 'API Error';
+        const errorMsg = data?.error || data?.errors?.[0]?.msg || 'API Error';
         toast.error(errorMsg);
         return { data: null, error: errorMsg };
       }

@@ -5,8 +5,8 @@ export default function ConfirmDialog({ open, title, message, onConfirm, onCance
       <div onClick={onCancel} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(6px)' }} />
       <div style={{
         position: 'relative', zIndex: 1,
-        background: '#1E293B',
-        border: '1px solid #334155',
+        background: 'var(--bg-card)',
+        border: '1px solid var(--border)',
         borderRadius: 18, padding: '28px 28px 22px',
         width: '100%', maxWidth: 420,
         boxShadow: '0 24px 64px rgba(0,0,0,0.6)',
@@ -24,8 +24,8 @@ export default function ConfirmDialog({ open, title, message, onConfirm, onCance
             </svg>
           </div>
           <div style={{ flex: 1 }}>
-            <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#F8FAFC' }}>{title}</h3>
-            <p style={{ margin: '6px 0 0', fontSize: 13, color: '#94A3B8', lineHeight: 1.55 }}>{message}</p>
+            <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: 'var(--text-1)' }}>{title}</h3>
+            <p style={{ margin: '6px 0 0', fontSize: 13, color: 'var(--text-2)', lineHeight: 1.55 }}>{message}</p>
           </div>
         </div>
         <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>

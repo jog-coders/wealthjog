@@ -3,10 +3,12 @@ import { ArrowLeftIcon, PencilIcon } from '@heroicons/react/24/outline';
 import RentalLedger from './RentalLedger';
 import RentalHistoryLedger from './RentalHistoryLedger';
 import RentalCharts from './RentalCharts';
+import CsvImportWizard from './CsvImportWizard';
 import { formatCurrency } from '../../utils/formatCurrency';
 
-export default function RentalDashboard({ property, onBack, onEdit }) {
+export default function RentalDashboard({ property, allRentals = [], onBack, onEdit }) {
   const [activeTab, setActiveTab] = useState('insights');
+  const [showImport, setShowImport] = useState(false);
 
   const mortAmt = (Number(property.mortgage_pi) || 0) + (Number(property.mortgage_escrow) || 0);
   const pmFees = Number(property.property_management_fees) || 0;
@@ -96,7 +98,21 @@ export default function RentalDashboard({ property, onBack, onEdit }) {
           
           <div className="p-0">
             {activeTab === 'insights'      && <div className="pt-4"><RentalCharts property={property} /></div>}
-            {activeTab === 'transactions'  && <RentalLedger propertyId={property.id} />}
+            {activeTab === 'transactions'  && (
+              <RentalLedger
+                propertyId={property.id}
+                propertyName={property.property_name}
+                allRentals={allRentals}
+                onImportCsv={() => setShowImport(true)}
+              />
+            )}
+            {showImport && (
+              <CsvImportWizard
+                rentals={allRentals}
+                onClose={() => setShowImport(false)}
+                onImported={() => setShowImport(false)}
+              />
+            )}
             {activeTab === 'history'       && <RentalHistoryLedger propertyId={property.id} />}
           </div>
         </div>

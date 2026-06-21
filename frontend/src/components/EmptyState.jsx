@@ -17,8 +17,8 @@ export default function EmptyState({ title, message, actionLabel, onAction }) {
           <path d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
         </svg>
       </div>
-      <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: '#F8FAFC' }}>{title}</h3>
-      <p style={{ margin: '6px 0 0', fontSize: 13, color: '#64748B' }}>{message}</p>
+      <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: 'var(--text-1)' }}>{title}</h3>
+      <p style={{ margin: '6px 0 0', fontSize: 13, color: 'var(--text-3)' }}>{message}</p>
       {onAction && actionLabel && (
         <div style={{ marginTop: 22 }}>
           <button type="button" onClick={onAction} className="btn-primary" style={{ padding: '9px 24px', fontSize: 13 }}>

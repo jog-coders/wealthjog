@@ -39,10 +39,41 @@
   --sidebar-w:    240px;
 }
 
+:root[data-theme='light'] {
+  /* Backgrounds */
+  --bg-main:      #F5F7FA;
+  --bg-card:      #FFFFFF;
+  --bg-elevated:  #EEF2F7;
+  --bg-sidebar:   #FFFFFF;
+
+  /* Borders */
+  --border:       #D8DEE8;
+  --border-subtle:#E7ECF3;
+
+  /* Brand */
+  --green:        #008F66;
+  --green-dim:    rgba(0,143,102,0.08);
+  --green-mid:    rgba(0,143,102,0.14);
+  --green-glow:   rgba(0,143,102,0.16);
+  --orange:       #D95F00;
+  --orange-dim:   rgba(217,95,0,0.10);
+
+  /* Text */
+  --text-1:       #0F172A;
+  --text-2:       #475569;
+  --text-3:       #64748B;
+
+  /* Semantic */
+  --success:      #008F66;
+  --danger:       #DC2626;
+  --danger-dim:   rgba(220,38,38,0.10);
+  --info:         #0369A1;
+}
+
 /* ── Base ──────────────────────────────────────────────────────────────────── */
 @layer base {
   html {
-    color-scheme: dark;
+    color-scheme: dark light;
     overflow-x: hidden;
     max-width: 100%;
   }
@@ -284,6 +315,36 @@
 .hover\:bg-primary-600:hover { background: #00B87D !important; }
 .focus\:ring-primary-500 { --tw-ring-color: rgba(0,210,142,0.3) !important; }
 .text-emerald-600        { color: var(--green) !important; }
+.text-text-1             { color: var(--text-1) !important; }
+.text-text-2             { color: var(--text-2) !important; }
+.text-text-3             { color: var(--text-3) !important; }
+.text-green              { color: var(--green) !important; }
+.text-success            { color: var(--success) !important; }
+
+/* Theme bridge for older arbitrary dark Tailwind utilities. */
+[data-theme='light'] .bg-\[\#0F172A\],
+[data-theme='light'] .bg-\[\#0F172A\]\/50 {
+  background-color: var(--bg-main) !important;
+}
+[data-theme='light'] .bg-\[\#1E293B\],
+[data-theme='light'] .bg-\[\#1E293B\]\/30,
+[data-theme='light'] .bg-\[\#1E293B\]\/40,
+[data-theme='light'] .bg-\[\#1E293B\]\/70 {
+  background-color: var(--bg-card) !important;
+}
+[data-theme='light'] .border-\[\#334155\],
+[data-theme='light'] .border-\[\#334155\]\/50,
+[data-theme='light'] .border-\[\#1E293B\] {
+  border-color: var(--border) !important;
+}
+[data-theme='light'] .text-slate-100,
+[data-theme='light'] .text-white {
+  color: var(--text-1) !important;
+}
+[data-theme='light'] .text-slate-300,
+[data-theme='light'] .text-slate-400 {
+  color: var(--text-2) !important;
+}
 
 /* Tables */
 .divide-y                > tr + tr { border-top: 1px solid var(--border); }

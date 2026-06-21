@@ -2,10 +2,12 @@
   "name": "pf-planner-backend",
   "version": "1.0.0",
   "description": "Backend API for Personal Financial Planner",
+  "type": "module",
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
-    "dev": "nodemon src/index.js"
+    "dev": "nodemon src/index.js",
+    "check": "for f in src/**/*.js src/*.js; do node --check \"$f\" || exit 1; done"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",

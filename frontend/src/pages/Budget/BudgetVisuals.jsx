@@ -37,14 +37,14 @@ function DarkTooltip({ active, payload, label }) {
   if (!active || !payload || !payload.length) return null;
   return (
     <div style={{
-      background: '#0F172A', border: '1px solid #334155', borderRadius: 10,
+      background: 'var(--bg-main)', border: '1px solid var(--border)', borderRadius: 10,
       padding: '10px 14px', boxShadow: '0 8px 24px rgba(0,0,0,0.6)', fontSize: 12,
     }}>
-      {label && <p style={{ margin: '0 0 6px', fontWeight: 600, color: '#F8FAFC' }}>{label}</p>}
+      {label && <p style={{ margin: '0 0 6px', fontWeight: 600, color: 'var(--text-1)' }}>{label}</p>}
       {payload.map((entry, i) => (
         <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: 16, margin: '2px 0' }}>
           <span style={{ color: entry.color }}>{entry.name || payload[0].name}:</span>
-          <span style={{ fontWeight: 600, color: '#F8FAFC' }}>{formatCurrency(entry.value)}</span>
+          <span style={{ fontWeight: 600, color: 'var(--text-1)' }}>{formatCurrency(entry.value)}</span>
         </div>
       ))}
     </div>
@@ -155,11 +155,11 @@ export default function BudgetVisuals({ currentStep }) {
   const pieTotal    = pieData.reduce((s, d) => s + d.value, 0);
 
   const cardStyle = {
-    background: 'linear-gradient(145deg, #1E293B 0%, #162032 100%)',
-    border: '1px solid #334155',
+    background: 'var(--bg-card)',
+    border: '1px solid var(--border)',
     borderRadius: 18,
     padding: '20px 22px',
-    boxShadow: '0 8px 32px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.04)',
+    boxShadow: '0 1px 3px rgba(15,23,42,0.08), 0 10px 24px rgba(15,23,42,0.08)',
   };
 
   return (
@@ -167,11 +167,11 @@ export default function BudgetVisuals({ currentStep }) {
 
       {/* ── Gradient Bar Chart ── */}
       <div style={cardStyle}>
-        <p style={{ margin: '0 0 2px', fontSize: 13, fontWeight: 700, color: '#F8FAFC' }}>{titleBar}</p>
-        <p style={{ margin: '0 0 18px', fontSize: 10, color: '#475569', letterSpacing: '0.04em' }}>Monthly breakdown · hover for details</p>
+        <p style={{ margin: '0 0 2px', fontSize: 13, fontWeight: 700, color: 'var(--text-1)' }}>{titleBar}</p>
+        <p style={{ margin: '0 0 18px', fontSize: 10, color: 'var(--text-3)', letterSpacing: '0.04em' }}>Monthly breakdown · hover for details</p>
         <div style={{ height: 300 }}>
           {barData.length === 0 ? (
-            <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#475569', fontSize: 13 }}>No data available</div>
+            <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-3)', fontSize: 13 }}>No data available</div>
           ) : (
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={barData} margin={{ top: 12, right: 8, left: 0, bottom: 0 }} barCategoryGap="35%">
@@ -185,10 +185,10 @@ export default function BudgetVisuals({ currentStep }) {
                   ))}
                 </defs>
                 <CartesianGrid strokeDasharray="2 4" stroke="rgba(51,65,85,0.35)" vertical={false} />
-                <XAxis dataKey="name" tick={{ fill: '#64748B', fontSize: 10 }} axisLine={false} tickLine={false} />
-                <YAxis tickFormatter={(v) => `$${(v/1000).toFixed(0)}k`} tick={{ fill: '#64748B', fontSize: 10 }} axisLine={false} tickLine={false} width={46} />
+                <XAxis dataKey="name" tick={{ fill: 'var(--text-3)', fontSize: 10 }} axisLine={false} tickLine={false} />
+                <YAxis tickFormatter={(v) => `$${(v/1000).toFixed(0)}k`} tick={{ fill: 'var(--text-3)', fontSize: 10 }} axisLine={false} tickLine={false} width={46} />
                 <Tooltip content={<DarkTooltip />} cursor={{ fill: 'rgba(255,255,255,0.03)', radius: 6 }} />
-                <Legend wrapperStyle={{ fontSize: 11, color: '#94A3B8', paddingTop: 10 }} iconType="circle" iconSize={7} />
+                <Legend wrapperStyle={{ fontSize: 11, color: 'var(--text-2)', paddingTop: 10 }} iconType="circle" iconSize={7} />
                 {barGrads.map(({ key, id }, idx) => {
                   const isTop = stackedBar ? idx === barGrads.length - 1 : true;
                   return (
@@ -209,11 +209,11 @@ export default function BudgetVisuals({ currentStep }) {
 
       {/* ── Gradient Donut Chart ── */}
       <div style={cardStyle}>
-        <p style={{ margin: '0 0 4px', fontSize: 13, fontWeight: 700, color: '#F8FAFC' }}>{titlePie}</p>
-        <p style={{ margin: '0 0 16px', fontSize: 10, color: '#64748B' }}>Proportional breakdown by category</p>
+        <p style={{ margin: '0 0 4px', fontSize: 13, fontWeight: 700, color: 'var(--text-1)' }}>{titlePie}</p>
+        <p style={{ margin: '0 0 16px', fontSize: 10, color: 'var(--text-3)' }}>Proportional breakdown by category</p>
         <div style={{ height: 300 }}>
           {pieData.length === 0 ? (
-            <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#475569', fontSize: 13 }}>No breakdown available</div>
+            <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-3)', fontSize: 13 }}>No breakdown available</div>
           ) : (
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
@@ -248,8 +248,8 @@ export default function BudgetVisuals({ currentStep }) {
                 <Tooltip content={<DarkTooltip />} />
                 <Legend
                   iconType="circle" iconSize={8}
-                  wrapperStyle={{ fontSize: 11, color: '#94A3B8', paddingTop: 4 }}
-                  formatter={(val) => <span style={{ color: '#94A3B8' }}>{val}</span>}
+                  wrapperStyle={{ fontSize: 11, color: 'var(--text-2)', paddingTop: 4 }}
+                  formatter={(val) => <span style={{ color: 'var(--text-2)' }}>{val}</span>}
                 />
               </PieChart>
             </ResponsiveContainer>

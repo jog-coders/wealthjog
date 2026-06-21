@@ -54,7 +54,7 @@ export default function LoginPage() {
   return (
     <div style={{
       minHeight: '100vh',
-      background: '#0F172A',
+      background: 'var(--bg-main)',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       padding: '24px 16px',
       position: 'relative', overflow: 'hidden',
@@ -71,10 +71,10 @@ export default function LoginPage() {
         {/* Brand */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 32 }}>
           <LogoMark size={56} />
-          <h1 style={{ margin: '16px 0 6px', fontSize: 26, fontWeight: 800, color: '#F8FAFC', letterSpacing: '-0.03em' }}>
+          <h1 style={{ margin: '16px 0 6px', fontSize: 26, fontWeight: 800, color: 'var(--text-1)', letterSpacing: '-0.03em' }}>
             Wealth<span style={{ color: '#00D28E' }}>JOG</span>
           </h1>
-          <p style={{ margin: 0, fontSize: 13, color: '#64748B' }}>Every dollar has a direction</p>
+          <p style={{ margin: 0, fontSize: 13, color: 'var(--text-3)' }}>Every dollar has a direction</p>
         </div>
 
         {/* Card */}
@@ -86,7 +86,7 @@ export default function LoginPage() {
           padding: '36px 32px',
           boxShadow: '0 0 40px rgba(0,210,142,0.08), 0 8px 32px rgba(0,0,0,0.5)',
         }}>
-          <p style={{ margin: '0 0 22px', fontSize: 11, fontWeight: 700, color: '#64748B', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+          <p style={{ margin: '0 0 22px', fontSize: 11, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
             Sign in to your account
           </p>
           <form onSubmit={handleEmailAuth} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>

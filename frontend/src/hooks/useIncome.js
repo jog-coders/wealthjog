@@ -4,7 +4,8 @@ import { useAppContext } from '../context/AppContext';
 
 export const useIncome = () => {
   const { get, post, put, del } = useApi();
-  const { session, refreshTrigger, refreshAll } = useAppContext();
+  const { session } = useAppContext();
+  const userId = session?.user?.id ?? null;
   
   const [income, setIncome] = useState([]);
   const [totals, setTotals] = useState({ biweeklyTotal: 0, monthlyTotal: 0, annualTotal: 0 });
@@ -12,7 +13,7 @@ export const useIncome = () => {
   const [error, setError] = useState(null);
 
   const fetchIncome = useCallback(async () => {
-    if (!session) return;
+    if (!userId) return;
     setLoading(true);
     const { data, error: fetchError } = await get('/api/income');
     if (fetchError) {
@@ -22,27 +23,27 @@ export const useIncome = () => {
       setTotals(data.totals || { biweeklyTotal: 0, monthlyTotal: 0, annualTotal: 0 });
     }
     setLoading(false);
-  }, [session, get]);
+  }, [userId, get]);
 
   useEffect(() => {
     fetchIncome();
-  }, [fetchIncome, refreshTrigger]);
+  }, [fetchIncome]);
 
   const createIncome = async (payload) => {
     const { error: postError } = await post('/api/income', payload);
-    if (!postError) { await fetchIncome(); refreshAll(); }
+    if (!postError) { await fetchIncome(); }
     return { error: postError };
   };
 
   const updateIncome = async (id, payload) => {
     const { error: putError } = await put(`/api/income/${id}`, payload);
-    if (!putError) { await fetchIncome(); refreshAll(); }
+    if (!putError) { await fetchIncome(); }
     return { error: putError };
   };
 
   const deleteIncome = async (id) => {
     const { error: delError } = await del(`/api/income/${id}`);
-    if (!delError) { await fetchIncome(); refreshAll(); }
+    if (!delError) { await fetchIncome(); }
     return { error: delError };
   };
 

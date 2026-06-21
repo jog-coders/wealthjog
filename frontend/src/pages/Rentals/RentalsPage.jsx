@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useRentals } from '../../hooks/useRentals';
 import RentalForm from './RentalForm';
 import RentalDashboard from './RentalDashboard';
+import RentalPortfolioDashboard from './RentalPortfolioDashboard';
 import { PlusIcon } from '@heroicons/react/24/outline';
 import { formatCurrency } from '../../utils/formatCurrency';
 import ConfirmDialog from '../../components/ConfirmDialog';
@@ -74,9 +75,14 @@ export default function RentalsPage() {
   const [selectedProperty, setSelectedProperty] = useState(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [showInactive, setShowInactive] = useState(false);
+  const [showDashboard, setShowDashboard] = useState(true);
   const [confirmDelete, setConfirmDelete] = useState(null); // property to delete
 
-  if (loading) return <div className="p-8 text-center text-gray-500">Loading rentals...</div>;
+  // Only show a loading screen when we have no data yet AND no property is selected.
+  // If a property dashboard is already open, a background refetch must not kill the view.
+  if (loading && rentals.length === 0 && !selectedProperty) {
+    return <div className="p-8 text-center text-gray-500">Loading rentals...</div>;
+  }
 
   if (selectedProperty) {
     const prop = rentals.find(r => r.id === selectedProperty.id) || selectedProperty;
@@ -84,6 +90,7 @@ export default function RentalsPage() {
       <>
         <RentalDashboard
           property={prop}
+          allRentals={rentals}
           onBack={() => setSelectedProperty(null)}
           onEdit={() => setIsFormOpen(true)}
         />
@@ -119,20 +126,35 @@ export default function RentalsPage() {
     : rentals.filter(r => r.is_active !== false);
 
   const inactiveCount = rentals.filter(r => r.is_active === false).length;
+  const toggleButtonStyle = (active) => ({
+    fontSize: 12,
+    padding: '4px 12px',
+    borderRadius: 999,
+    border: active ? '1px solid var(--green)' : '1px solid var(--border)',
+    fontWeight: 700,
+    transition: 'all 0.15s',
+    background: active ? 'var(--green-dim)' : 'var(--bg-card)',
+    color: active ? 'var(--green)' : 'var(--text-2)',
+    boxShadow: active ? '0 0 0 1px var(--green-mid)' : 'none',
+  });
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
       <div className="flex flex-wrap justify-between items-center gap-3">
         <div className="flex items-center gap-3">
           <h1 className="page-title mb-0">Rental Properties</h1>
+          {rentals.length > 0 && (
+            <button
+              onClick={() => setShowDashboard(s => !s)}
+              style={toggleButtonStyle(showDashboard)}
+            >
+              {showDashboard ? 'Hide Dashboard' : 'Show Dashboard'}
+            </button>
+          )}
           {inactiveCount > 0 && (
             <button
               onClick={() => setShowInactive(s => !s)}
-              className={`text-xs px-3 py-1 rounded-full border font-medium transition ${
-                showInactive
-                  ? 'bg-gray-800 text-white border-gray-800'
-                  : 'bg-white text-gray-500 border-gray-300 hover:border-gray-500'
-              }`}
+              style={toggleButtonStyle(showInactive)}
             >
               {showInactive ? `Hide inactive (${inactiveCount})` : `Show inactive (${inactiveCount})`}
             </button>
@@ -142,6 +164,10 @@ export default function RentalsPage() {
           <PlusIcon className="h-5 w-5 mr-2" /> Add Property
         </button>
       </div>
+
+      {showDashboard && rentals.length > 0 && (
+        <RentalPortfolioDashboard rentals={visibleRentals} />
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {visibleRentals.map(prop => {
@@ -237,5 +263,4 @@ export default function RentalsPage() {
     </div>
   );
 }
-
 

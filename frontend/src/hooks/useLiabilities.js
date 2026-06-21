@@ -5,7 +5,8 @@ import { getLatestEntries } from '../utils/latestEntries';
 
 export const useLiabilities = () => {
   const { get, post, put, del } = useApi();
-  const { session, refreshTrigger, refreshAll } = useAppContext();
+  const { session } = useAppContext();
+  const userId = session?.user?.id ?? null;
   
   const [fullLedger, setFullLedger] = useState([]);
   const [currentLiabilities, setCurrentLiabilities] = useState([]);
@@ -17,7 +18,7 @@ export const useLiabilities = () => {
   const [typeFilter, setTypeFilter] = useState('');
 
   const fetchLiabilities = useCallback(async () => {
-    if (!session) return;
+    if (!userId) return;
     setLoading(true);
     let path = '/api/liabilities';
     const params = new URLSearchParams();
@@ -44,27 +45,27 @@ export const useLiabilities = () => {
       setTotal(totalData.totalAmount || 0);
     }
     setLoading(false);
-  }, [session, search, typeFilter, get]);
+  }, [userId, search, typeFilter, get]);
 
   useEffect(() => {
     fetchLiabilities();
-  }, [fetchLiabilities, refreshTrigger]);
+  }, [fetchLiabilities]);
 
   const createLiability = async (payload) => {
     const { error: postError } = await post('/api/liabilities', payload);
-    if (!postError) { await fetchLiabilities(); refreshAll(); }
+    if (!postError) { await fetchLiabilities(); }
     return { error: postError };
   };
 
   const updateLiability = async (id, payload) => {
     const { error: putError } = await put(`/api/liabilities/${id}`, payload);
-    if (!putError) { await fetchLiabilities(); refreshAll(); }
+    if (!putError) { await fetchLiabilities(); }
     return { error: putError };
   };
 
   const deleteLiability = async (id) => {
     const { error: delError } = await del(`/api/liabilities/${id}`);
-    if (!delError) { await fetchLiabilities(); refreshAll(); }
+    if (!delError) { await fetchLiabilities(); }
     return { error: delError };
   };
 

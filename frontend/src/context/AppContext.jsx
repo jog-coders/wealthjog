@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabaseClient';
 
 const AppContext = createContext();
@@ -8,37 +8,30 @@ export const AppProvider = ({ children }) => {
   const [session, setSession] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
 
-  // Global refresh trigger. We increment this to tell hooks to refetch.
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
-
   useEffect(() => {
+    // Initial session load
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       setAuthLoading(false);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
+      // TOKEN_REFRESHED: the supabase client updates its internal token automatically.
+      // We do NOT update React state here — doing so recreates all hook callbacks
+      // and triggers a full data refetch across every mounted page (looks like a reload).
+      if (event === 'TOKEN_REFRESHED') return;
+
+      setSession(newSession);
+      setUser(newSession?.user ?? null);
       setAuthLoading(false);
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
-  const refreshAll = () => {
-    setRefreshTrigger(prev => prev + 1);
-  };
-
   return (
-    <AppContext.Provider value={{
-      user,
-      session,
-      authLoading,
-      refreshTrigger,
-      refreshAll
-    }}>
+    <AppContext.Provider value={{ user, session, authLoading }}>
       {children}
     </AppContext.Provider>
   );

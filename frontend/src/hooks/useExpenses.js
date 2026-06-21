@@ -4,7 +4,8 @@ import { useAppContext } from '../context/AppContext';
 
 export const useExpenses = () => {
   const { get, post, put, del } = useApi();
-  const { session, refreshTrigger, refreshAll } = useAppContext();
+  const { session } = useAppContext();
+  const userId = session?.user?.id ?? null;
   
   const [expenses, setExpenses] = useState([]);
   const [overspendAlerts, setOverspendAlerts] = useState([]);
@@ -14,7 +15,7 @@ export const useExpenses = () => {
   const [monthFilter, setMonthFilter] = useState('');
 
   const fetchExpenses = useCallback(async () => {
-    if (!session) return;
+    if (!userId) return;
     setLoading(true);
     let path = '/api/expenses';
     if (monthFilter) {
@@ -34,33 +35,33 @@ export const useExpenses = () => {
     }
 
     setLoading(false);
-  }, [session, monthFilter, get]);
+  }, [userId, monthFilter, get]);
 
   useEffect(() => {
     fetchExpenses();
-  }, [fetchExpenses, refreshTrigger]);
+  }, [fetchExpenses]);
 
   const createExpense = async (payload) => {
     const { error: postError } = await post('/api/expenses', payload);
-    if (!postError) refreshAll();
+    if (!postError)
     return { error: postError };
   };
 
   const createBulkExpenses = async (payloadArray) => {
     const { error: postError } = await post('/api/expenses/bulk', payloadArray);
-    if (!postError) refreshAll();
+    if (!postError)
     return { error: postError };
   };
 
   const updateExpense = async (id, payload) => {
     const { error: putError } = await put(`/api/expenses/${id}`, payload);
-    if (!putError) refreshAll();
+    if (!putError)
     return { error: putError };
   };
 
   const deleteExpense = async (id) => {
     const { error: delError } = await del(`/api/expenses/${id}`);
-    if (!delError) refreshAll();
+    if (!delError)
     return { error: delError };
   };
 

@@ -1,96 +1,76 @@
 import { useState } from 'react';
 import { useIncome } from '../../hooks/useIncome';
+import { useDraft } from '../../hooks/useDraft';
 import { formatCurrency } from '../../utils/formatCurrency';
 import CurrencyInput from '../../components/CurrencyInput';
 import RunningTotal from '../../components/RunningTotal';
 import EmptyState from '../../components/EmptyState';
 import ConfirmDialog from '../../components/ConfirmDialog';
 
+const FORM_INIT = {
+  name: '', description: '', type: 'Salary', frequency: 'Monthly',
+  grossIncome: 0, retirementSavings: 0, otherDeductions: 0, amount: 0,
+  isAdding: false, editingId: null,
+};
+
 export default function IncomeStep({ onNext }) {
   const { income, totals, createIncome, updateIncome, deleteIncome } = useIncome();
-  
-  const [isAdding, setIsAdding] = useState(false);
-  const [editingId, setEditingId] = useState(null);
-  
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const [type, setType] = useState('Salary');
-  const [frequency, setFrequency] = useState('Monthly');
-  
-  const [grossIncome, setGrossIncome] = useState(0);
-  const [retirementSavings, setRetirementSavings] = useState(0);
-  const [otherDeductions, setOtherDeductions] = useState(0);
-  const [amount, setAmount] = useState(0); // This represents Net Income
+  const [form, setForm, clearDraft] = useDraft('income-step-form', FORM_INIT);
+
+  const { name, description, type, frequency, grossIncome, retirementSavings,
+          otherDeductions, amount, isAdding, editingId } = form;
 
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
 
-  const resetForm = () => {
-    setName('');
-    setDescription('');
-    setType('Salary');
-    setFrequency('Monthly');
-    setGrossIncome(0);
-    setRetirementSavings(0);
-    setOtherDeductions(0);
-    setAmount(0);
-    setIsAdding(false);
-    setEditingId(null);
-  };
+  const patch = (fields) => setForm(f => ({ ...f, ...fields }));
+
+  const resetForm = () => clearDraft();
 
   const handleEdit = (item) => {
-    setName(item.name);
-    setDescription(item.description || '');
-    setType(item.type);
-    setFrequency(item.frequency);
-    setGrossIncome(item.gross_income || 0);
-    setRetirementSavings(item.retirement_savings || 0);
-    setOtherDeductions(item.other_deductions || 0);
-    setAmount(item.amount || 0);
-    setEditingId(item.id);
-    setIsAdding(true);
+    setForm({
+      name: item.name,
+      description: item.description || '',
+      type: item.type || 'Salary',
+      frequency: item.frequency || 'Monthly',
+      grossIncome: item.gross_income || 0,
+      retirementSavings: item.retirement_savings || 0,
+      otherDeductions: item.other_deductions || 0,
+      amount: item.amount || 0,
+      editingId: item.id,
+      isAdding: true,
+    });
   };
 
   const handleGrossChange = (val) => {
-    setGrossIncome(val);
-    setAmount(val - retirementSavings - otherDeductions);
+    patch({ grossIncome: val, amount: val - retirementSavings - otherDeductions });
   };
-
   const handleRetirementChange = (val) => {
-    setRetirementSavings(val);
-    setAmount(grossIncome - val - otherDeductions);
+    patch({ retirementSavings: val, amount: grossIncome - val - otherDeductions });
   };
-
   const handleOtherDeductionsChange = (val) => {
-    setOtherDeductions(val);
-    setAmount(grossIncome - retirementSavings - val);
+    patch({ otherDeductions: val, amount: grossIncome - retirementSavings - val });
   };
-
   const handleNetChange = (val) => {
-    setAmount(val);
-    setOtherDeductions(grossIncome - val - retirementSavings);
+    patch({ amount: val, otherDeductions: grossIncome - val - retirementSavings });
   };
 
   const handleSave = async () => {
     if (!name || amount < 0) return;
-    
-    const payload = { 
-      name, 
-      description, 
-      type, 
-      frequency, 
-      amount,
+
+    const payload = {
+      name, description, type, frequency, amount,
       gross_income: grossIncome,
       retirement_savings: retirementSavings,
-      other_deductions: otherDeductions
+      other_deductions: otherDeductions,
     };
-    
+
     if (editingId) {
       await updateIncome(editingId, payload);
     } else {
       await createIncome(payload);
     }
-    resetForm();
+    clearDraft();
   };
 
   const confirmDelete = (id) => {
@@ -113,7 +93,7 @@ export default function IncomeStep({ onNext }) {
         {!isAdding && (
           <button
             type="button"
-            onClick={() => setIsAdding(true)}
+            onClick={() => patch({ isAdding: true })}
             className="rounded-lg bg-primary-500 px-3 py-2 text-sm font-semibold text-white hover:bg-primary-600"
           >
             Add Income
@@ -126,11 +106,11 @@ export default function IncomeStep({ onNext }) {
           <div className="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
             <div className="sm:col-span-2">
               <label className="block text-sm font-medium text-gray-600">Name</label>
-              <input type="text" value={name} onChange={e => setName(e.target.value)} className="mt-1 block w-full rounded-lg border-gray-200 focus:border-primary-500 focus:ring-primary-500 sm:text-sm px-3 py-2 border bg-white" />
+              <input type="text" value={name} onChange={e => patch({ name: e.target.value })} className="mt-1 block w-full rounded-lg border-gray-200 focus:border-primary-500 focus:ring-primary-500 sm:text-sm px-3 py-2 border bg-white" />
             </div>
             <div className="sm:col-span-2">
               <label className="block text-sm font-medium text-gray-600">Type</label>
-              <select value={type} onChange={e => setType(e.target.value)} className="mt-1 block w-full rounded-lg border-gray-200 focus:border-primary-500 focus:ring-primary-500 sm:text-sm px-3 py-2 border bg-white">
+              <select value={type} onChange={e => patch({ type: e.target.value })} className="mt-1 block w-full rounded-lg border-gray-200 focus:border-primary-500 focus:ring-primary-500 sm:text-sm px-3 py-2 border bg-white">
                 <option value="Salary">Salary</option>
                 <option value="Rental">Rental</option>
                 <option value="Other Income">Other Income</option>
@@ -138,7 +118,7 @@ export default function IncomeStep({ onNext }) {
             </div>
             <div className="sm:col-span-2">
               <label className="block text-sm font-medium text-gray-600">Frequency</label>
-              <select value={frequency} onChange={e => setFrequency(e.target.value)} className="mt-1 block w-full rounded-lg border-gray-200 focus:border-primary-500 focus:ring-primary-500 sm:text-sm px-3 py-2 border bg-white">
+              <select value={frequency} onChange={e => patch({ frequency: e.target.value })} className="mt-1 block w-full rounded-lg border-gray-200 focus:border-primary-500 focus:ring-primary-500 sm:text-sm px-3 py-2 border bg-white">
                 <option value="Biweekly">Biweekly</option>
                 <option value="Monthly">Monthly</option>
                 <option value="Annual">Annual</option>
@@ -146,7 +126,7 @@ export default function IncomeStep({ onNext }) {
             </div>
             <div className="sm:col-span-6">
               <label className="block text-sm font-medium text-gray-600">Description</label>
-              <input type="text" value={description} onChange={e => setDescription(e.target.value)} className="mt-1 block w-full rounded-lg border-gray-200 focus:border-primary-500 focus:ring-primary-500 sm:text-sm px-3 py-2 border bg-white" />
+              <input type="text" value={description} onChange={e => patch({ description: e.target.value })} className="mt-1 block w-full rounded-lg border-gray-200 focus:border-primary-500 focus:ring-primary-500 sm:text-sm px-3 py-2 border bg-white" />
             </div>
             
             <div className="sm:col-span-3">

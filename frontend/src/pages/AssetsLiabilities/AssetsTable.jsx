@@ -1,7 +1,9 @@
 import { useState, useEffect, Fragment } from 'react';
+import { useDraft } from '../../hooks/useDraft';
 import { useAssets } from '../../hooks/useAssets';
 import { useApi } from '../../hooks/useApi';
 import CurrencyInput from '../../components/CurrencyInput';
+import InstitutionSelect from '../../components/InstitutionSelect';
 import RunningTotal from '../../components/RunningTotal';
 import ConfirmDialog from '../../components/ConfirmDialog';
 import { formatCurrency } from '../../utils/formatCurrency';
@@ -9,7 +11,7 @@ import EmptyState from '../../components/EmptyState';
 import { ChevronDownIcon, ChevronRightIcon, PlusIcon } from '@heroicons/react/24/outline';
 
 // ── Focused Update Balance modal ──────────────────────────────────────────
-function UpdateBalanceModal({ item, onClose, onSave }) {
+function UpdateBalanceModal({ item, onClose, onSave, assetTypes = [] }) {
   const [amount, setAmount]   = useState(0);
   const [date, setDate]       = useState(new Date().toISOString().split('T')[0]);
   const [error, setError]     = useState('');
@@ -37,20 +39,20 @@ function UpdateBalanceModal({ item, onClose, onSave }) {
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 300, padding: 16 }}>
-      <div style={{ background: '#1E293B', border: '1px solid #334155', borderRadius: 16, width: '100%', maxWidth: 400, boxShadow: '0 24px 64px rgba(0,0,0,0.5)' }}>
+      <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, width: '100%', maxWidth: 400, boxShadow: '0 24px 64px rgba(0,0,0,0.5)' }}>
         
         {/* Header */}
-        <div style={{ padding: '16px 20px', borderBottom: '1px solid #334155', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
-            <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: '#F8FAFC' }}>Update Balance</p>
-            <p style={{ margin: '3px 0 0', fontSize: 11, color: '#64748B' }}>{item.name} · {item.type || 'Asset'}</p>
+            <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: 'var(--text-1)' }}>Update Balance</p>
+            <p style={{ margin: '3px 0 0', fontSize: 11, color: 'var(--text-3)' }}>{item.name} · {assetTypes.find(t => t.value === item.type)?.label || item.type || 'Asset'}</p>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748B', fontSize: 20, lineHeight: 1 }}>×</button>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', fontSize: 20, lineHeight: 1 }}>×</button>
         </div>
 
         {/* Current value */}
         <div style={{ padding: '12px 20px', background: 'rgba(0,210,142,0.06)', borderBottom: '1px solid #0F172A' }}>
-          <p style={{ margin: 0, fontSize: 11, color: '#64748B' }}>Current balance</p>
+          <p style={{ margin: 0, fontSize: 11, color: 'var(--text-3)' }}>Current balance</p>
           <p style={{ margin: '2px 0 0', fontSize: 20, fontWeight: 800, color: '#00D28E' }}>{formatCurrency(item.amount)}</p>
         </div>
 
@@ -63,19 +65,19 @@ function UpdateBalanceModal({ item, onClose, onSave }) {
           )}
 
           <div style={{ marginBottom: 16 }}>
-            <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#94A3B8', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: 6 }}>New Balance *</label>
+            <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--text-2)', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: 6 }}>New Balance *</label>
             <CurrencyInput value={amount} onChange={setAmount} placeholder="Enter new balance" />
           </div>
 
           <div style={{ marginBottom: 20 }}>
-            <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#94A3B8', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: 6 }}>As of Date *</label>
+            <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--text-2)', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: 6 }}>As of Date *</label>
             <input type="date" value={date} onChange={e => setDate(e.target.value)}
-              style={{ display: 'block', width: '100%', borderRadius: 8, padding: '8px 12px', fontSize: 13, background: '#0F172A', color: '#F8FAFC', border: '1.5px solid #334155', outline: 'none', colorScheme: 'dark', boxSizing: 'border-box' }}
+              style={{ display: 'block', width: '100%', borderRadius: 8, padding: '8px 12px', fontSize: 13, background: 'var(--bg-main)', color: 'var(--text-1)', border: '1.5px solid #334155', outline: 'none', colorScheme: 'dark', boxSizing: 'border-box' }}
             />
           </div>
 
           <div style={{ display: 'flex', gap: 10 }}>
-            <button onClick={onClose} disabled={saving} style={{ flex: 1, padding: '9px 0', borderRadius: 8, background: 'transparent', border: '1.5px solid #334155', color: '#94A3B8', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
+            <button onClick={onClose} disabled={saving} style={{ flex: 1, padding: '9px 0', borderRadius: 8, background: 'transparent', border: '1.5px solid #334155', color: 'var(--text-2)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
             <button onClick={handleSave} disabled={saving} style={{ flex: 2, padding: '9px 0', borderRadius: 8, background: saving ? '#00B87D' : '#00D28E', border: 'none', color: '#0F172A', fontSize: 13, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
               {saving ? 'Saving…' : 'Save Balance'}
             </button>
@@ -91,22 +93,26 @@ export default function AssetsTable() {
   const { get } = useApi();
   
   const [updateBalanceItem, setUpdateBalanceItem] = useState(null);
+  const [assetTypes, setAssetTypes] = useState([
+    { value: 'checking', label: 'Checking' },
+    { value: 'savings',  label: 'Savings' },
+    { value: 'investment_401k', label: '401(k)' },
+    { value: 'investment_ira',  label: 'IRA' },
+    { value: 'investment_brokerage', label: 'Brokerage' },
+    { value: 'real_estate', label: 'Real Estate' },
+  ]);
 
   const handleUpdateBalance = (item) => {
     setUpdateBalanceItem(item);
   };
 
-  const [types, setTypes] = useState([]);
-  const [institutions, setInstitutions] = useState([]);
-  const [isAdding, setIsAdding] = useState(false);
-  const [editingId, setEditingId] = useState(null);
-  
-  const [name, setName] = useState('');
-  const [type, setType] = useState('');
-  const [institution, setInstitution] = useState('');
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-  const [amount, setAmount] = useState(0);
-  const [monthlyFixedSavings, setMonthlyFixedSavings] = useState(0);
+  const TODAY = new Date().toISOString().split('T')[0];
+  const [form, setForm, clearDraft] = useDraft('assets-form', {
+    isAdding: false, editingId: null,
+    name: '', type: 'checking', institution: '', date: TODAY, amount: 0, monthlyFixedSavings: 0,
+  });
+  const { isAdding, editingId, name, type, institution, date, amount, monthlyFixedSavings } = form;
+  const patch = (fields) => setForm(f => ({ ...f, ...fields }));
 
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
@@ -117,29 +123,23 @@ export default function AssetsTable() {
   };
 
   useEffect(() => {
-    get('/api/settings/enum-values?domain=asset_type').then(({ data }) => {
-      if (data) setTypes(data);
-    });
-    get('/api/settings/enum-values?domain=institution').then(({ data }) => {
-      if (data) setInstitutions(data);
+    get('/api/settings/lookup-values?domain=asset_type').then(({ data }) => {
+      if (data && data.length > 0) setAssetTypes(data);
     });
   }, [get]);
 
-  const resetForm = () => {
-    setName(''); setType(''); setInstitution('');
-    setDate(new Date().toISOString().split('T')[0]);
-    setAmount(0); setMonthlyFixedSavings(0);
-    setIsAdding(false); setEditingId(null);
-  };
+  const resetForm = () => clearDraft();
 
   const handleEdit = (item) => {
-    setName(item.name); setType(item.type);
-    setInstitution(item.institution || '');
-    setDate(item.date || new Date().toISOString().split('T')[0]);
-    setAmount(item.amount);
-    setMonthlyFixedSavings(item.monthly_fixed_savings || 0);
-    setEditingId(item.id);
-    setIsAdding(true);
+    setForm({
+      name: item.name, type: item.type,
+      institution: item.institution || '',
+      date: item.date || new Date().toISOString().split('T')[0],
+      amount: item.amount,
+      monthlyFixedSavings: item.monthly_fixed_savings || 0,
+      editingId: item.id,
+      isAdding: true,
+    });
   };
 
   const handleSave = async () => {
@@ -178,13 +178,13 @@ export default function AssetsTable() {
             className="block w-full rounded-lg border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-200 focus:ring-2 focus:ring-inset focus:ring-primary-500 sm:text-sm sm:leading-6 px-3 bg-white"
           >
             <option value="">All Types</option>
-            {types.map(t => <option key={t.id} value={t.label}>{t.label}</option>)}
+            {assetTypes.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
           </select>
         </div>
         {!isAdding && (
           <button
             type="button"
-            onClick={() => setIsAdding(true)}
+            onClick={() => patch({ isAdding: true })}
             className="rounded-lg bg-primary-500 px-3 py-2 text-sm font-semibold text-white hover:bg-primary-600"
           >
             + Add Asset
@@ -200,52 +200,33 @@ export default function AssetsTable() {
           <div className="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
             <div className="sm:col-span-2">
               <label className="block text-sm font-medium text-gray-600">Name *</label>
-              <input type="text" value={name} onChange={e => setName(e.target.value)} className="mt-1 block w-full rounded-lg border-gray-200 focus:border-primary-500 focus:ring-primary-500 sm:text-sm px-3 py-2 border" />
+              <input type="text" value={name} onChange={e => patch({ name: e.target.value })} className="mt-1 block w-full rounded-lg border-gray-200 focus:border-primary-500 focus:ring-primary-500 sm:text-sm px-3 py-2 border" />
             </div>
             <div className="sm:col-span-2">
               <label className="block text-sm font-medium text-gray-600">Type</label>
-              <select value={type} onChange={e => setType(e.target.value)} className="mt-1 block w-full rounded-lg border-gray-200 focus:border-primary-500 focus:ring-primary-500 sm:text-sm px-3 py-2 border bg-white">
+              <select value={type} onChange={e => patch({ type: e.target.value })} className="mt-1 block w-full rounded-lg border-gray-200 focus:border-primary-500 focus:ring-primary-500 sm:text-sm px-3 py-2 border bg-white">
                 <option value="">Select type</option>
-                {types.map(t => <option key={t.id} value={t.label}>{t.label}</option>)}
+                {assetTypes.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
               </select>
             </div>
             <div className="sm:col-span-2">
               <label className="block text-sm font-medium text-gray-600">Institution</label>
-              {institutions.length > 0 ? (
-                <select
-                  value={institutions.some(i => i.label === institution) ? institution : institution ? '__custom__' : ''}
-                  onChange={e => setInstitution(e.target.value === '__custom__' ? '' : e.target.value)}
-                  className="mt-1 block w-full rounded-lg border-gray-200 focus:border-primary-500 focus:ring-primary-500 sm:text-sm px-3 py-2 border bg-white"
-                >
-                  <option value="">Select institution</option>
-                  {institutions.map(i => <option key={i.id} value={i.label}>{i.label}</option>)}
-                  <option value="__custom__">Other (type manually)</option>
-                </select>
-              ) : null}
-              {(institutions.length === 0 || !institutions.some(i => i.label === institution) && institution !== '') ? (
-                <input
-                  type="text"
-                  value={institution}
-                  onChange={e => setInstitution(e.target.value)}
-                  placeholder={institutions.length > 0 ? 'Enter custom institution…' : 'Institution name'}
-                  className="mt-1 block w-full rounded-lg border-gray-200 focus:border-primary-500 focus:ring-primary-500 sm:text-sm px-3 py-2 border"
-                />
-              ) : null}
+              <InstitutionSelect value={institution} onChange={v => patch({ institution: v })} />
             </div>
             <div className="sm:col-span-2">
               <label className="block text-sm font-medium text-gray-600">Date *</label>
-              <input type="date" value={date} onChange={e => setDate(e.target.value)} className="mt-1 block w-full rounded-lg border-gray-200 focus:border-primary-500 focus:ring-primary-500 sm:text-sm px-3 py-2 border" />
+              <input type="date" value={date} onChange={e => patch({ date: e.target.value })} className="mt-1 block w-full rounded-lg border-gray-200 focus:border-primary-500 focus:ring-primary-500 sm:text-sm px-3 py-2 border" />
             </div>
             <div className="sm:col-span-2">
               <label className="block text-sm font-medium text-gray-600">Current Amount *</label>
               <div className="mt-1">
-                <CurrencyInput value={amount} onChange={setAmount} />
+                <CurrencyInput value={amount} onChange={v => patch({ amount: v })} />
               </div>
             </div>
             <div className="sm:col-span-3">
               <label className="block text-sm font-medium text-gray-600">Monthly Fixed Savings</label>
               <div className="mt-1">
-                <CurrencyInput value={monthlyFixedSavings} onChange={setMonthlyFixedSavings} />
+                <CurrencyInput value={monthlyFixedSavings} onChange={v => patch({ monthlyFixedSavings: v })} />
               </div>
               <p className="mt-1 text-xs text-gray-500">Automatically added to Fixed Monthly Costs in the Budget tab.</p>
             </div>
@@ -285,7 +266,7 @@ export default function AssetsTable() {
                       )}
                       {item.name}
                     </td>
-                    <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{item.type}</td>
+                    <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{assetTypes.find(t => t.value === item.type)?.label || item.type}</td>
                     <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{item.institution}</td>
                     <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{item.date ? item.date : '-'}</td>
                     <td className="whitespace-nowrap px-3 py-4 text-sm font-semibold text-gray-900">{formatCurrency(item.amount)}</td>
@@ -360,6 +341,7 @@ export default function AssetsTable() {
       {updateBalanceItem && (
         <UpdateBalanceModal
           item={updateBalanceItem}
+          assetTypes={assetTypes}
           onClose={() => setUpdateBalanceItem(null)}
           onSave={async ({ amount, date }) => {
             const result = await createAsset({

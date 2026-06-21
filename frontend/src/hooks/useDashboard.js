@@ -4,7 +4,8 @@ import { useAppContext } from '../context/AppContext';
 
 export const useDashboard = () => {
   const { get } = useApi();
-  const { session, refreshTrigger } = useAppContext();
+  const { session } = useAppContext();
+  const userId = session?.user?.id ?? null;
   
   const [netWorthSnapshot, setNetWorthSnapshot] = useState({});
   const [netWorthHistory, setNetWorthHistory] = useState([]);
@@ -16,7 +17,7 @@ export const useDashboard = () => {
   const [periodMonths, setPeriodMonths] = useState('6'); // 3, 6, 12, all
 
   const fetchDashboard = useCallback(async () => {
-    if (!session) return;
+    if (!userId) return;
     setLoading(true);
 
     const [snapRes, histRes, expVsBudRes, moSpendRes, annTrackRes] = await Promise.all([
@@ -34,11 +35,11 @@ export const useDashboard = () => {
     if (annTrackRes.data) setAnnualTracking(annTrackRes.data);
 
     setLoading(false);
-  }, [session, periodMonths, get]);
+  }, [userId, periodMonths, get]);
 
   useEffect(() => {
     fetchDashboard();
-  }, [fetchDashboard, refreshTrigger]);
+  }, [fetchDashboard]);
 
   return {
     netWorthSnapshot,

@@ -17,15 +17,15 @@ export default function MonthlySpendChart() {
     if (active && payload && payload.length) {
       const total = payload.reduce((sum, e) => sum + e.value, 0);
       return (
-        <div style={{ background: '#1E293B', border: '1px solid #334155', borderRadius: 10, padding: '10px 14px', boxShadow: '0 8px 24px rgba(0,0,0,0.5)', fontSize: 12 }}>
-          <p style={{ margin: '0 0 6px', fontWeight: 600, color: '#F8FAFC' }}>{label}</p>
+        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, padding: '10px 14px', boxShadow: '0 8px 24px rgba(0,0,0,0.5)', fontSize: 12 }}>
+          <p style={{ margin: '0 0 6px', fontWeight: 600, color: 'var(--text-1)' }}>{label}</p>
           {payload.map((entry, i) => (
-            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: 16, padding: '1px 0', color: '#94A3B8' }}>
+            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: 16, padding: '1px 0', color: 'var(--text-2)' }}>
               <span style={{ color: entry.color }}>{entry.name}:</span>
-              <span style={{ fontWeight: 600, color: '#F8FAFC' }}>{formatCurrency(entry.value)}</span>
+              <span style={{ fontWeight: 600, color: 'var(--text-1)' }}>{formatCurrency(entry.value)}</span>
             </div>
           ))}
-          <div style={{ marginTop: 6, paddingTop: 6, borderTop: '1px solid #334155', display: 'flex', justifyContent: 'space-between', fontWeight: 700, color: '#F8FAFC' }}>
+          <div style={{ marginTop: 6, paddingTop: 6, borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', fontWeight: 700, color: 'var(--text-1)' }}>
             <span>Total:</span>
             <span>{formatCurrency(total)}</span>
           </div>
@@ -36,22 +36,22 @@ export default function MonthlySpendChart() {
   };
 
   return (
-    <div style={{ background: '#1E293B', border: '1px solid #334155', borderRadius: 16, padding: '20px 24px', boxShadow: '0 1px 3px rgba(0,0,0,0.4)' }}>
-      <h3 style={{ margin: '0 0 16px', fontSize: 15, fontWeight: 700, color: '#F8FAFC' }}>Monthly Spend by Category</h3>
+    <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, padding: '20px 24px', boxShadow: '0 1px 3px rgba(0,0,0,0.4)' }}>
+      <h3 style={{ margin: '0 0 16px', fontSize: 15, fontWeight: 700, color: 'var(--text-1)' }}>Monthly Spend by Category</h3>
 
       <div style={{ height: 260 }}>
         {monthlySpend.length === 0 ? (
-          <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748B', fontSize: 13, textAlign: 'center' }}>
+          <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-3)', fontSize: 13, textAlign: 'center' }}>
             No expenses found for this period.
           </div>
         ) : (
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={monthlySpend} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(51,65,85,0.5)" />
-              <XAxis dataKey="month" tick={{ fill: '#64748B', fontSize: 10 }} axisLine={false} tickLine={false} />
-              <YAxis tickFormatter={(val) => `$${val/1000}k`} tick={{ fill: '#64748B', fontSize: 10 }} axisLine={false} tickLine={false} width={44} />
+              <XAxis dataKey="month" tick={{ fill: 'var(--text-3)', fontSize: 10 }} axisLine={false} tickLine={false} />
+              <YAxis tickFormatter={(val) => `$${val/1000}k`} tick={{ fill: 'var(--text-3)', fontSize: 10 }} axisLine={false} tickLine={false} width={44} />
               <Tooltip content={<DarkTooltip />} />
-              <Legend wrapperStyle={{ fontSize: 11, color: '#94A3B8' }} />
+              <Legend wrapperStyle={{ fontSize: 11, color: 'var(--text-2)' }} />
               {allCategories.map(category => (
                 <Bar key={category} dataKey={category} stackId="a" fill={colorMap[category] || '#8884d8'} />
               ))}

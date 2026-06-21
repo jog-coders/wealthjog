@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import InstitutionSelect from '../../components/InstitutionSelect';
 
 // All date fields in this form — empty string → null before submit
 const DATE_FIELDS = [
@@ -42,7 +43,7 @@ function validate(data) {
 function FieldWrap({ label, error, children, span2 = false }) {
   return (
     <div className={span2 ? 'sm:col-span-2' : ''}>
-      <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#94A3B8', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: 5 }}>
+      <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--text-2)', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: 5 }}>
         {label}
       </label>
       {children}
@@ -53,7 +54,7 @@ function FieldWrap({ label, error, children, span2 = false }) {
 
 const inputStyle = (hasError = false) => ({
   display: 'block', width: '100%', borderRadius: 8, padding: '8px 12px', fontSize: 13,
-  background: '#0F172A', color: '#F8FAFC',
+  background: 'var(--bg-main)', color: 'var(--text-1)',
   border: `1.5px solid ${hasError ? '#F87171' : '#334155'}`,
   outline: 'none', transition: 'border-color 0.15s',
   colorScheme: 'dark',
@@ -84,7 +85,7 @@ function Section({ title, children }) {
 }
 
 function Divider() {
-  return <div style={{ height: 1, background: '#1E293B', margin: '4px 0' }} />;
+  return <div style={{ height: 1, background: 'var(--bg-card)', margin: '4px 0' }} />;
 }
 
 // ── Main form ─────────────────────────────────────────────────────────────────
@@ -144,8 +145,8 @@ export default function RentalForm({ property, onClose, onSubmit }) {
     onSubmit(sanitize(formData));
   };
 
-  const modal = { background: '#1E293B', border: '1px solid #334155' };
-  const header = { background: '#0B1120', borderBottom: '1px solid #1E293B' };
+  const modal = { background: 'var(--bg-card)', border: '1px solid var(--border)' };
+  const header = { background: 'var(--bg-sidebar)', borderBottom: '1px solid var(--border-subtle)' };
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, zIndex: 200 }}>
@@ -153,10 +154,10 @@ export default function RentalForm({ property, onClose, onSubmit }) {
 
         {/* Header */}
         <div style={{ ...header, padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, zIndex: 10, borderRadius: '18px 18px 0 0' }}>
-          <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#F8FAFC' }}>
+          <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--text-1)' }}>
             {property ? 'Edit Property' : 'Add Property'}
           </h2>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748B', fontSize: 22, lineHeight: 1 }} aria-label="Close">×</button>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', fontSize: 22, lineHeight: 1 }} aria-label="Close">×</button>
         </div>
 
         <form onSubmit={handleSubmit} style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: 24 }} noValidate>
@@ -192,7 +193,7 @@ export default function RentalForm({ property, onClose, onSubmit }) {
               <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', marginTop: 2 }}>
                 <input type="checkbox" name="status_occupied" checked={formData.status_occupied} onChange={handleChange}
                   style={{ accentColor: '#00D28E', width: 16, height: 16 }} />
-                <span style={{ fontSize: 13, color: '#94A3B8' }}>Occupied</span>
+                <span style={{ fontSize: 13, color: 'var(--text-2)' }}>Occupied</span>
               </label>
             </FieldWrap>
           </Section>
@@ -252,7 +253,10 @@ export default function RentalForm({ property, onClose, onSubmit }) {
               <TextInput id="rf-mortgage_maturity_date" type="date" name="mortgage_maturity_date" value={formData.mortgage_maturity_date} onChange={handleChange} errors={errors} />
             </FieldWrap>
             <FieldWrap label="Bank / Institution">
-              <TextInput name="mortgage_bank" value={formData.mortgage_bank} onChange={handleChange} errors={errors} placeholder="e.g. Chase" />
+              <InstitutionSelect
+                value={formData.mortgage_bank}
+                onChange={v => handleChange({ target: { name: 'mortgage_bank', value: v } })}
+              />
             </FieldWrap>
             <FieldWrap label="Loan Number">
               <TextInput name="mortgage_loan_number" value={formData.mortgage_loan_number} onChange={handleChange} errors={errors} />
@@ -296,7 +300,7 @@ export default function RentalForm({ property, onClose, onSubmit }) {
           </Section>
 
           {/* ── Footer ── */}
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, paddingTop: 8, borderTop: '1px solid #1E293B', marginTop: 8 }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, paddingTop: 8, borderTop: '1px solid var(--border-subtle)', marginTop: 8 }}>
             <button type="button" onClick={onClose} className="btn-secondary" style={{ minWidth: 96 }}>Cancel</button>
             <button type="submit" className="btn-primary" style={{ minWidth: 128 }}>Save Property</button>
           </div>

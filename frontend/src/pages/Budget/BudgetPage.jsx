@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useDraft } from '../../hooks/useDraft';
 import Stepper from '../../components/Stepper';
 import IncomeStep from './IncomeStep';
 import AnnualBudgetStep from './AnnualBudgetStep';
@@ -13,7 +14,7 @@ import LoadingSpinner from '../../components/LoadingSpinner';
 const STEPS = ['Income', 'Annual Budget', 'Fixed Monthly', 'Guilt-Free Budget', 'Summary'];
 
 export default function BudgetPage() {
-  const [currentStep, setCurrentStep] = useState(0);
+  const [currentStep, setCurrentStep] = useDraft('budget-current-step', 0);
   
   const { loading: incomeLoading } = useIncome();
   const { loading: budgetLoading } = useBudget();

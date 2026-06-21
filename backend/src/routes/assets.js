@@ -1,185 +1,162 @@
+// assets.js — now uses balance_sheet_accounts (asset classes only)
 import express from 'express';
 import { body } from 'express-validator';
 import { supabase } from '../supabaseClient.js';
 import { validate } from '../middleware/validate.js';
-import { maybeSnapshot } from '../services/netWorthSnapshot.js';
-import { getLatestEntries } from '../utils/latestEntries.js';
 
 const router = express.Router();
+
+const ASSET_CLASSES = ['checking','savings','investment_401k','investment_ira','investment_brokerage','real_estate'];
+
+/**
+ * Sync a Fixed Monthly Savings budget entry for an asset.
+ * If monthlyCents > 0 → upsert (delete existing + insert fresh).
+ * If monthlyCents == 0 → remove any existing auto-injected entry for this account.
+ */
+async function syncAssetBudgetEntry(userId, accountName, monthlyCents) {
+  // Always remove the old entry first (clean slate)
+  await supabase
+    .from('budget_categories')
+    .delete()
+    .eq('user_id', userId)
+    .eq('name', accountName)
+    .eq('is_auto_injected', true);
+
+  if (monthlyCents > 0) {
+    await supabase.from('budget_categories').insert({
+      user_id: userId,
+      name: accountName,
+      category_type: 'fixed_cost',
+      monthly_amount_cents: monthlyCents,
+      is_auto_injected: true,
+      sort_order: 9999,
+      is_active: true,
+    });
+  }
+}
 
 router.get('/', async (req, res) => {
   try {
     const { search, type } = req.query;
-    
     let query = supabase
-      .from('assets')
+      .from('balance_sheet_accounts')
       .select('*')
       .eq('user_id', req.userId)
+      .in('account_class', ASSET_CLASSES)
+      .eq('is_active', true)
       .order('created_at', { ascending: true });
 
     if (search) query = query.ilike('name', `%${search}%`);
-    if (type) query = query.eq('type', type);
+    if (type)   query = query.eq('account_class', type);
 
     const { data, error } = await query;
     if (error) throw error;
-    
-    res.json(data);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
+
+    res.json((data || []).map(r => ({
+      ...r,
+      amount: r.current_balance_cents / 100,
+      type: r.account_class,
+      current_value: r.current_balance_cents / 100,
+      monthly_fixed_savings: (r.monthly_payment_cents || 0) / 100,
+      date: r.date || r.created_at?.split('T')[0] || null,
+    })));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 
 router.get('/total', async (req, res) => {
   try {
     const { data, error } = await supabase
-      .from('assets')
-      .select('amount, name, date, created_at')
-      .eq('user_id', req.userId);
+      .from('balance_sheet_accounts')
+      .select('current_balance_cents')
+      .eq('user_id', req.userId)
+      .in('account_class', ASSET_CLASSES)
+      .eq('is_active', true);
 
     if (error) throw error;
-    
-    const latestData = getLatestEntries(data);
-    const totalAmount = latestData.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+    const totalAmount = (data || []).reduce((s, r) => s + r.current_balance_cents, 0) / 100;
     res.json({ totalAmount });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 
 router.post('/',
-  [
-    body('name').notEmpty(),
-    body('amount').isFloat({ min: 0 }),
-    body('date').optional({ nullable: true, checkFalsy: true }).isISO8601(),
-    body('monthly_fixed_savings').optional({ nullable: true, checkFalsy: true }).isFloat({ min: 0 })
-  ],
+  [body('name').notEmpty(), body('amount').isFloat({ min: 0 })],
   validate,
   async (req, res) => {
     try {
-      const { name, type, institution, amount, date, monthly_fixed_savings } = req.body;
-      
-      const { data: asset, error: insertError } = await supabase
-        .from('assets')
-        .insert([{ user_id: req.userId, name, type, institution, amount, date: date || null, monthly_fixed_savings: monthly_fixed_savings || null }])
-        .select()
-        .single();
+      const { name, type, institution, amount, monthly_fixed_savings, date } = req.body;
+      const account_class = ASSET_CLASSES.includes(type) ? type : 'checking';
+      const monthly_payment_cents = Math.round((parseFloat(monthly_fixed_savings) || 0) * 100);
 
-      if (insertError) throw insertError;
+      const { data, error } = await supabase
+        .from('balance_sheet_accounts')
+        .insert([{ user_id: req.userId, name, account_class, institution,
+          current_balance_cents: Math.round((parseFloat(amount) || 0) * 100),
+          monthly_payment_cents,
+          date: date || null }])
+        .select().single();
 
-      if (monthly_fixed_savings > 0) {
-        await supabase
-          .from('budget_line_items')
-          .insert([{
-            user_id: req.userId,
-            section: 'fixed_monthly',
-            is_auto_injected: true,
-            source_id: asset.id,
-            source_type: 'asset',
-            category: `${asset.name} — Savings`,
-            amount: monthly_fixed_savings
-          }]);
-      }
+      if (error) throw error;
 
-      await maybeSnapshot(req.userId);
-      res.json(asset);
-    } catch (error) {
-      res.status(500).json({ error: error.message });
+      await syncAssetBudgetEntry(req.userId, name, monthly_payment_cents);
+
+      res.json({ ...data, amount: data.current_balance_cents / 100, type: data.account_class, monthly_fixed_savings: data.monthly_payment_cents / 100 });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
     }
   }
 );
 
 router.put('/:id',
-  [
-    body('name').notEmpty(),
-    body('amount').isFloat({ min: 0 }),
-    body('date').optional({ nullable: true, checkFalsy: true }).isISO8601(),
-    body('monthly_fixed_savings').optional({ nullable: true, checkFalsy: true }).isFloat({ min: 0 })
-  ],
+  [body('name').notEmpty(), body('amount').isFloat({ min: 0 })],
   validate,
   async (req, res) => {
     try {
-      const { name, type, institution, amount, date, monthly_fixed_savings } = req.body;
-      const assetId = req.params.id;
+      const { name, type, institution, amount, monthly_fixed_savings, date } = req.body;
+      const account_class = ASSET_CLASSES.includes(type) ? type : 'checking';
+      const monthly_payment_cents = Math.round((parseFloat(monthly_fixed_savings) || 0) * 100);
 
-      const { data: asset, error: updateError } = await supabase
-        .from('assets')
-        .update({ name, type, institution, amount, date: date || null, monthly_fixed_savings: monthly_fixed_savings || null, updated_at: new Date().toISOString() })
-        .eq('id', assetId)
-        .eq('user_id', req.userId)
-        .select()
-        .single();
+      const { data, error } = await supabase
+        .from('balance_sheet_accounts')
+        .update({ name, account_class, institution,
+          current_balance_cents: Math.round((parseFloat(amount) || 0) * 100),
+          monthly_payment_cents,
+          date: date || null,
+          updated_at: new Date().toISOString() })
+        .eq('id', req.params.id).eq('user_id', req.userId)
+        .select().single();
 
-      if (updateError) throw updateError;
+      if (error) throw error;
 
-      if (monthly_fixed_savings > 0) {
-        // Upsert budget line item
-        const { data: existing } = await supabase
-          .from('budget_line_items')
-          .select('id')
-          .eq('source_id', assetId)
-          .eq('source_type', 'asset')
-          .single();
+      await syncAssetBudgetEntry(req.userId, name, monthly_payment_cents);
 
-        if (existing) {
-          await supabase
-            .from('budget_line_items')
-            .update({
-              category: `${asset.name} — Savings`,
-              amount: monthly_fixed_savings
-            })
-            .eq('id', existing.id);
-        } else {
-          await supabase
-            .from('budget_line_items')
-            .insert([{
-              user_id: req.userId,
-              section: 'fixed_monthly',
-              is_auto_injected: true,
-              source_id: asset.id,
-              source_type: 'asset',
-              category: `${asset.name} — Savings`,
-              amount: monthly_fixed_savings
-            }]);
-        }
-      } else {
-        // Delete if null/0
-        await supabase
-          .from('budget_line_items')
-          .delete()
-          .eq('source_id', assetId)
-          .eq('source_type', 'asset');
-      }
-
-      await maybeSnapshot(req.userId);
-      res.json(asset);
-    } catch (error) {
-      res.status(500).json({ error: error.message });
+      res.json({ ...data, amount: data.current_balance_cents / 100, type: data.account_class, monthly_fixed_savings: data.monthly_payment_cents / 100 });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
     }
   }
 );
 
 router.delete('/:id', async (req, res) => {
   try {
-    const assetId = req.params.id;
-    
-    const { error: deleteError } = await supabase
-      .from('assets')
-      .delete()
-      .eq('id', assetId)
-      .eq('user_id', req.userId);
+    // Fetch name before deleting so we can remove the auto-injected budget entry
+    const { data: account } = await supabase
+      .from('balance_sheet_accounts').select('name').eq('id', req.params.id).eq('user_id', req.userId).single();
 
-    if (deleteError) throw deleteError;
+    const { error } = await supabase.from('balance_sheet_accounts').delete()
+      .eq('id', req.params.id).eq('user_id', req.userId);
+    if (error) throw error;
 
-    await supabase
-      .from('budget_line_items')
-      .delete()
-      .eq('source_id', assetId)
-      .eq('source_type', 'asset');
+    if (account?.name) {
+      await syncAssetBudgetEntry(req.userId, account.name, 0);
+    }
 
-    await maybeSnapshot(req.userId);
     res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 

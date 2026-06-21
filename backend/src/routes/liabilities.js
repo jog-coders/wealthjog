@@ -1,185 +1,155 @@
+// liabilities.js — now uses balance_sheet_accounts (liability classes only)
 import express from 'express';
 import { body } from 'express-validator';
 import { supabase } from '../supabaseClient.js';
 import { validate } from '../middleware/validate.js';
-import { maybeSnapshot } from '../services/netWorthSnapshot.js';
-import { getLatestEntries } from '../utils/latestEntries.js';
 
 const router = express.Router();
+
+const LIABILITY_CLASSES = ['mortgage_liability','credit_card_liability','other_liability'];
+
+async function syncLiabilityBudgetEntry(userId, accountName, monthlyCents) {
+  await supabase
+    .from('budget_categories')
+    .delete()
+    .eq('user_id', userId)
+    .eq('name', accountName)
+    .eq('is_auto_injected', true);
+
+  if (monthlyCents > 0) {
+    await supabase.from('budget_categories').insert({
+      user_id: userId,
+      name: accountName,
+      category_type: 'fixed_cost',
+      monthly_amount_cents: monthlyCents,
+      is_auto_injected: true,
+      sort_order: 9999,
+      is_active: true,
+    });
+  }
+}
 
 router.get('/', async (req, res) => {
   try {
     const { search, type } = req.query;
-    
     let query = supabase
-      .from('liabilities')
+      .from('balance_sheet_accounts')
       .select('*')
       .eq('user_id', req.userId)
+      .in('account_class', LIABILITY_CLASSES)
+      .eq('is_active', true)
       .order('created_at', { ascending: true });
 
     if (search) query = query.ilike('name', `%${search}%`);
-    if (type) query = query.eq('type', type);
+    if (type)   query = query.eq('account_class', type);
 
     const { data, error } = await query;
     if (error) throw error;
-    
-    res.json(data);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
+
+    // Liabilities stored as negative cents — return positive amount for display
+    res.json((data || []).map(r => ({
+      ...r,
+      amount: Math.abs(r.current_balance_cents) / 100,
+      type: r.account_class,
+      monthly_fixed_expense: (r.monthly_payment_cents || 0) / 100,
+      date: r.date || r.created_at?.split('T')[0] || null,
+    })));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 
 router.get('/total', async (req, res) => {
   try {
     const { data, error } = await supabase
-      .from('liabilities')
-      .select('amount, name, date, created_at')
-      .eq('user_id', req.userId);
+      .from('balance_sheet_accounts')
+      .select('current_balance_cents')
+      .eq('user_id', req.userId)
+      .in('account_class', LIABILITY_CLASSES)
+      .eq('is_active', true);
 
     if (error) throw error;
-    
-    const latestData = getLatestEntries(data);
-    const totalAmount = latestData.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+    const totalAmount = (data || []).reduce((s, r) => s + Math.abs(r.current_balance_cents), 0) / 100;
     res.json({ totalAmount });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 
 router.post('/',
-  [
-    body('name').notEmpty(),
-    body('amount').isFloat({ min: 0 }),
-    body('date').optional({ nullable: true, checkFalsy: true }).isISO8601(),
-    body('monthly_fixed_expense').optional({ nullable: true, checkFalsy: true }).isFloat({ min: 0 })
-  ],
+  [body('name').notEmpty(), body('amount').isFloat({ min: 0 })],
   validate,
   async (req, res) => {
     try {
-      const { name, type, institution, amount, date, monthly_fixed_expense } = req.body;
-      
-      const { data: liability, error: insertError } = await supabase
-        .from('liabilities')
-        .insert([{ user_id: req.userId, name, type, institution, amount, date: date || null, monthly_fixed_expense: monthly_fixed_expense || null }])
-        .select()
-        .single();
+      const { name, type, institution, amount, monthly_fixed_expense, date } = req.body;
+      const account_class = LIABILITY_CLASSES.includes(type) ? type : 'other_liability';
+      const monthly_payment_cents = Math.round((parseFloat(monthly_fixed_expense) || 0) * 100);
 
-      if (insertError) throw insertError;
+      const { data, error } = await supabase
+        .from('balance_sheet_accounts')
+        .insert([{ user_id: req.userId, name, account_class, institution,
+          current_balance_cents: -Math.round((parseFloat(amount) || 0) * 100),
+          monthly_payment_cents,
+          date: date || null }])
+        .select().single();
 
-      if (monthly_fixed_expense > 0) {
-        await supabase
-          .from('budget_line_items')
-          .insert([{
-            user_id: req.userId,
-            section: 'fixed_monthly',
-            is_auto_injected: true,
-            source_id: liability.id,
-            source_type: 'liability',
-            category: `${liability.name} — Payment`,
-            amount: monthly_fixed_expense
-          }]);
-      }
+      if (error) throw error;
 
-      await maybeSnapshot(req.userId);
-      res.json(liability);
-    } catch (error) {
-      res.status(500).json({ error: error.message });
+      await syncLiabilityBudgetEntry(req.userId, name, monthly_payment_cents);
+
+      res.json({ ...data, amount: Math.abs(data.current_balance_cents) / 100, type: data.account_class, monthly_fixed_expense: data.monthly_payment_cents / 100 });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
     }
   }
 );
 
 router.put('/:id',
-  [
-    body('name').notEmpty(),
-    body('amount').isFloat({ min: 0 }),
-    body('date').optional({ nullable: true, checkFalsy: true }).isISO8601(),
-    body('monthly_fixed_expense').optional({ nullable: true, checkFalsy: true }).isFloat({ min: 0 })
-  ],
+  [body('name').notEmpty(), body('amount').isFloat({ min: 0 })],
   validate,
   async (req, res) => {
     try {
-      const { name, type, institution, amount, date, monthly_fixed_expense } = req.body;
-      const liabilityId = req.params.id;
+      const { name, type, institution, amount, monthly_fixed_expense, date } = req.body;
+      const account_class = LIABILITY_CLASSES.includes(type) ? type : 'other_liability';
+      const monthly_payment_cents = Math.round((parseFloat(monthly_fixed_expense) || 0) * 100);
 
-      const { data: liability, error: updateError } = await supabase
-        .from('liabilities')
-        .update({ name, type, institution, amount, date: date || null, monthly_fixed_expense: monthly_fixed_expense || null, updated_at: new Date().toISOString() })
-        .eq('id', liabilityId)
-        .eq('user_id', req.userId)
-        .select()
-        .single();
+      const { data, error } = await supabase
+        .from('balance_sheet_accounts')
+        .update({ name, account_class, institution,
+          current_balance_cents: -Math.round((parseFloat(amount) || 0) * 100),
+          monthly_payment_cents,
+          date: date || null,
+          updated_at: new Date().toISOString() })
+        .eq('id', req.params.id).eq('user_id', req.userId)
+        .select().single();
 
-      if (updateError) throw updateError;
+      if (error) throw error;
 
-      if (monthly_fixed_expense > 0) {
-        // Upsert budget line item
-        const { data: existing } = await supabase
-          .from('budget_line_items')
-          .select('id')
-          .eq('source_id', liabilityId)
-          .eq('source_type', 'liability')
-          .single();
+      await syncLiabilityBudgetEntry(req.userId, name, monthly_payment_cents);
 
-        if (existing) {
-          await supabase
-            .from('budget_line_items')
-            .update({
-              category: `${liability.name} — Payment`,
-              amount: monthly_fixed_expense
-            })
-            .eq('id', existing.id);
-        } else {
-          await supabase
-            .from('budget_line_items')
-            .insert([{
-              user_id: req.userId,
-              section: 'fixed_monthly',
-              is_auto_injected: true,
-              source_id: liability.id,
-              source_type: 'liability',
-              category: `${liability.name} — Payment`,
-              amount: monthly_fixed_expense
-            }]);
-        }
-      } else {
-        // Delete if null/0
-        await supabase
-          .from('budget_line_items')
-          .delete()
-          .eq('source_id', liabilityId)
-          .eq('source_type', 'liability');
-      }
-
-      await maybeSnapshot(req.userId);
-      res.json(liability);
-    } catch (error) {
-      res.status(500).json({ error: error.message });
+      res.json({ ...data, amount: Math.abs(data.current_balance_cents) / 100, type: data.account_class, monthly_fixed_expense: data.monthly_payment_cents / 100 });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
     }
   }
 );
 
 router.delete('/:id', async (req, res) => {
   try {
-    const liabilityId = req.params.id;
-    
-    const { error: deleteError } = await supabase
-      .from('liabilities')
-      .delete()
-      .eq('id', liabilityId)
-      .eq('user_id', req.userId);
+    const { data: account } = await supabase
+      .from('balance_sheet_accounts').select('name').eq('id', req.params.id).eq('user_id', req.userId).single();
 
-    if (deleteError) throw deleteError;
+    const { error } = await supabase.from('balance_sheet_accounts').delete()
+      .eq('id', req.params.id).eq('user_id', req.userId);
+    if (error) throw error;
 
-    await supabase
-      .from('budget_line_items')
-      .delete()
-      .eq('source_id', liabilityId)
-      .eq('source_type', 'liability');
+    if (account?.name) {
+      await syncLiabilityBudgetEntry(req.userId, account.name, 0);
+    }
 
-    await maybeSnapshot(req.userId);
     res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 

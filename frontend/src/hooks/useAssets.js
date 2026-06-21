@@ -5,7 +5,8 @@ import { getLatestEntries } from '../utils/latestEntries';
 
 export const useAssets = () => {
   const { get, post, put, del } = useApi();
-  const { session, refreshTrigger, refreshAll } = useAppContext();
+  const { session } = useAppContext();
+  const userId = session?.user?.id ?? null;
   
   const [fullLedger, setFullLedger] = useState([]);
   const [currentAssets, setCurrentAssets] = useState([]);
@@ -17,7 +18,7 @@ export const useAssets = () => {
   const [typeFilter, setTypeFilter] = useState('');
 
   const fetchAssets = useCallback(async () => {
-    if (!session) return;
+    if (!userId) return;
     setLoading(true);
     let path = '/api/assets';
     const params = new URLSearchParams();
@@ -44,27 +45,27 @@ export const useAssets = () => {
       setTotal(totalData.totalAmount || 0);
     }
     setLoading(false);
-  }, [session, search, typeFilter, get]);
+  }, [userId, search, typeFilter, get]);
 
   useEffect(() => {
     fetchAssets();
-  }, [fetchAssets, refreshTrigger]);
+  }, [fetchAssets]);
 
   const createAsset = async (payload) => {
     const { error: postError } = await post('/api/assets', payload);
-    if (!postError) { await fetchAssets(); refreshAll(); }
+    if (!postError) { await fetchAssets(); }
     return { error: postError };
   };
 
   const updateAsset = async (id, payload) => {
     const { error: putError } = await put(`/api/assets/${id}`, payload);
-    if (!putError) { await fetchAssets(); refreshAll(); }
+    if (!putError) { await fetchAssets(); }
     return { error: putError };
   };
 
   const deleteAsset = async (id) => {
     const { error: delError } = await del(`/api/assets/${id}`);
-    if (!delError) { await fetchAssets(); refreshAll(); }
+    if (!delError) { await fetchAssets(); }
     return { error: delError };
   };
 

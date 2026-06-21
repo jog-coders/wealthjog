@@ -4,7 +4,8 @@ import { useAppContext } from '../context/AppContext';
 
 export const useBudget = () => {
   const { get, post } = useApi();
-  const { session, refreshTrigger, refreshAll } = useAppContext();
+  const { session } = useAppContext();
+  const userId = session?.user?.id ?? null;
   
   const [summary, setSummary] = useState({});
   const [lineItems, setLineItems] = useState({ annual: [], fixed_monthly: [], guilt_free: [] });
@@ -12,7 +13,7 @@ export const useBudget = () => {
   const [error, setError] = useState(null);
 
   const fetchSummary = useCallback(async () => {
-    if (!session) return;
+    if (!userId) return;
     setLoading(true);
     const { data, error: fetchError } = await get('/api/budget/summary');
     if (fetchError) {
@@ -35,15 +36,15 @@ export const useBudget = () => {
       });
     }
     setLoading(false);
-  }, [session, get]);
+  }, [userId, get]);
 
   useEffect(() => {
     fetchSummary();
-  }, [fetchSummary, refreshTrigger]);
+  }, [fetchSummary]);
 
   const saveSection = async (section, items) => {
     const { error: postError } = await post('/api/budget/batch', { section, items });
-    if (!postError) { await fetchSummary(); refreshAll(); }
+    if (!postError) { await fetchSummary(); }
     return { error: postError };
   };
 

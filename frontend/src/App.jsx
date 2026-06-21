@@ -1,23 +1,25 @@
 import { lazy, Suspense, useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AppProvider, useAppContext } from './context/AppContext';
 import Navbar from './components/Navbar';
 
 const SIDEBAR_W = 240;
 
+// Lazy-load pages — they mount once and stay mounted
 const LoginPage        = lazy(() => import('./pages/LoginPage'));
 const AcceptInvitePage = lazy(() => import('./pages/AcceptInvitePage'));
 const BudgetPage       = lazy(() => import('./pages/Budget/BudgetPage'));
 const AssetsPage       = lazy(() => import('./pages/AssetsLiabilities/AssetsLiabilitiesPage'));
-const ExpensePage      = lazy(() => import('./pages/ExpenseTracker/ExpenseTrackerPage'));
 const DashboardPage    = lazy(() => import('./pages/Dashboard/DashboardPage'));
 const SettingsPage     = lazy(() => import('./pages/Settings/SettingsPage'));
 const RentalsPage      = lazy(() => import('./pages/Rentals/RentalsPage'));
+const LedgerPage       = lazy(() => import('./pages/Ledger/LedgerPage'));
+const TaxStudioPage    = lazy(() => import('./pages/TaxStudio/TaxStudioPage'));
 
 function PageLoader() {
   return (
-    <div style={{ minHeight: '100vh', background: '#0F172A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--bg-main)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <svg style={{ width: 32, height: 32, color: '#00D28E', animation: 'spin 0.9s linear infinite' }}
         xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
@@ -28,7 +30,6 @@ function PageLoader() {
   );
 }
 
-// Responsive: sidebar on desktop, top+bottom bar on mobile
 function useIsMobile(bp = 768) {
   const [mobile, setMobile] = useState(() => window.innerWidth < bp);
   useEffect(() => {
@@ -41,19 +42,28 @@ function useIsMobile(bp = 768) {
   return mobile;
 }
 
-function ProtectedRoute({ children }) {
-  const { session, authLoading } = useAppContext();
+/**
+ * KeepAliveRoutes — renders every page once and keeps them mounted.
+ * Only the active route is visible (display: block); others are hidden (display: none).
+ * This preserves all form state across tab switches without needing sessionStorage.
+ */
+const ROUTES = [
+  { path: '/dashboard', Component: DashboardPage },
+  { path: '/budget',    Component: BudgetPage },
+  { path: '/assets',    Component: AssetsPage },
+{ path: '/rentals',   Component: RentalsPage },
+  { path: '/ledger',    Component: LedgerPage },
+  { path: '/tax',       Component: TaxStudioPage },
+  { path: '/settings',  Component: SettingsPage },
+];
+
+function KeepAliveRoutes() {
+  const location = useLocation();
   const isMobile = useIsMobile(768);
 
-  if (authLoading) return <PageLoader />;
-  if (!session) return <Navigate to="/login" replace />;
-
   return (
-    <div style={{ minHeight: '100vh', background: '#0F172A', display: 'flex', width: '100%', overflowX: 'hidden' }}>
-      {/* Sidebar (desktop) / Top+Bottom bar (mobile) */}
+    <div style={{ minHeight: '100vh', background: 'var(--bg-main)', display: 'flex', width: '100%', overflowX: 'hidden' }}>
       <Navbar />
-
-      {/* Main content */}
       <main style={{
         flex: 1,
         marginLeft: isMobile ? 0 : SIDEBAR_W,
@@ -70,10 +80,46 @@ function ProtectedRoute({ children }) {
           width: '100%',
           boxSizing: 'border-box',
         }}>
-          {children}
+          {ROUTES.map(({ path, Component }) => (
+            <div
+              key={path}
+              style={{ display: location.pathname === path ? 'block' : 'none' }}
+            >
+              <Suspense fallback={<PageLoader />}>
+                <Component />
+              </Suspense>
+            </div>
+          ))}
         </div>
       </main>
     </div>
+  );
+}
+
+function AppRoutes() {
+  const { session, authLoading } = useAppContext();
+
+  if (authLoading) return <PageLoader />;
+
+  return (
+    <Routes>
+      {/* Public routes */}
+      <Route path="/login"         element={!session ? <Suspense fallback={<PageLoader />}><LoginPage /></Suspense> : <Navigate to="/dashboard" replace />} />
+      <Route path="/accept-invite" element={<Suspense fallback={<PageLoader />}><AcceptInvitePage /></Suspense>} />
+
+      {/* Root redirect */}
+      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+
+      {/* Redirect old /expenses to /ledger */}
+      <Route path="/expenses" element={<Navigate to="/ledger" replace />} />
+
+      {/* Protected app — all pages kept mounted, switched via CSS */}
+      {session ? (
+        <Route path="/*" element={<KeepAliveRoutes />} />
+      ) : (
+        <Route path="/*" element={<Navigate to="/login" replace />} />
+      )}
+    </Routes>
   );
 }
 
@@ -84,9 +130,9 @@ function App() {
         position="top-right"
         toastOptions={{
           style: {
-            background: '#1E293B',
-            color: '#F8FAFC',
-            border: '1px solid #334155',
+            background: 'var(--bg-card)',
+            color: 'var(--text-1)',
+            border: '1px solid var(--border)',
             borderRadius: '12px',
             boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
             fontSize: 13,
@@ -96,19 +142,7 @@ function App() {
         }}
       />
       <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-        <Suspense fallback={<PageLoader />}>
-          <Routes>
-            <Route path="/login"         element={<LoginPage />} />
-            <Route path="/accept-invite" element={<AcceptInvitePage />} />
-            <Route path="/"              element={<Navigate to="/dashboard" replace />} />
-            <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
-            <Route path="/budget"    element={<ProtectedRoute><BudgetPage /></ProtectedRoute>} />
-            <Route path="/assets"    element={<ProtectedRoute><AssetsPage /></ProtectedRoute>} />
-            <Route path="/expenses"  element={<ProtectedRoute><ExpensePage /></ProtectedRoute>} />
-            <Route path="/rentals"   element={<ProtectedRoute><RentalsPage /></ProtectedRoute>} />
-            <Route path="/settings"  element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
-          </Routes>
-        </Suspense>
+        <AppRoutes />
       </BrowserRouter>
     </AppProvider>
   );
